@@ -8,9 +8,10 @@ import { AppContext } from './context/AppContext'
 import Dashboard from './pages/Dashboard'
 import AddJob from './pages/AddJob'
 import ManageJobs from './pages/ManageJobs'
-import ViewApplicaions from './pages/ViewApplications'
+import ViewApplications from './pages/ViewApplications'
 
 import SavedJobs from "./pages/SavedJobs";
+import ProfilePage from "./pages/ProfilePage";
 
 import 'quill/dist/quill.snow.css'
 const App = () => {
@@ -19,15 +20,17 @@ const App = () => {
   return (
     <div>
       {showRecruiterLogin && <RecruiterLogin />}
+
       <Routes>
         <Route path='/' element={<Home />} />
         <Route path='/apply-job/:id' element={<ApplyJob />} />
         <Route path="/saved-jobs" element={<SavedJobs />} />
         <Route path='/applications' element={<Applications />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path='/dashboard' element={<Dashboard />}>
           <Route path='add-job' element={<AddJob />}></Route>
           <Route path='manage-jobs' element={<ManageJobs />}></Route>
-          <Route path='view-applications' element={<ViewApplicaions />}></Route>
+          <Route path='view-applications' element={<ViewApplications />}></Route>
         </Route>
 
 
