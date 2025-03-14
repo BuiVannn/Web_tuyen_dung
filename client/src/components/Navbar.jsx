@@ -19,6 +19,8 @@ const Navbar = () => {
                 {
                     user
                         ? <div className="flex items-center gap-3">
+                            <Link to="/blog" className="text-gray-700 hover:text-blue-500">Blog</Link>
+
                             <Link to={'/applications'}>Applied Jobs</Link>
                             <p>|</p>
                             <Link to={"/saved-jobs"} >Saved Jobs</Link>
