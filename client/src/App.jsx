@@ -19,6 +19,14 @@ import Blog from './pages/Blog'
 //import BlogCreate from './pages/BlogCreate'
 import BlogDetail from './pages/BlogDetail'
 //import BlogEdit from './pages/BlogEdit'
+
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import CandidateManagement from "./pages/admin/CandidateManagement";
+import RecruiterManagement from "./pages/admin/RecruiterManagement";
+//import JobsManagement from "./pages/admin/JobsManagement";
+//import UserDetails from "./pages/admin/UserDetails";
+
+
 const App = () => {
 
   const { showRecruiterLogin } = useContext(AppContext)
@@ -42,6 +50,14 @@ const App = () => {
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:id" element={<BlogDetail />} />
         {/* <Route path="/blog/edit/:id" element={<BlogEdit />} /> */}
+
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/candidates" element={<CandidateManagement />} />
+        {/* <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} /> */}
+        {/* <Route path="/admin/candidates" element={<AdminRoute><CandidateManagement /></AdminRoute>} /> */}
+        <Route path="/admin/recruiters" element={<RecruiterManagement />} />
+        {/* <Route path="/admin/jobs" element={<AdminRoute><JobsManagement /></AdminRoute>} /> */}
+        {/* <Route path="/admin/users/:id" element={<AdminRoute><UserDetails /></AdminRoute>} /> */}
       </Routes>
     </div>
   )

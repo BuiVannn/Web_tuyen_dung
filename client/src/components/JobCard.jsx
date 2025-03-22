@@ -1,16 +1,24 @@
+// Dùng để quản lý trạng thái của icon bookmark.
 import React, { useState, useEffect } from "react";
+
+
 import { assets } from "../assets/assets";
 import { useNavigate } from "react-router-dom";
 
 // test
-import { FaHeart, FaRegHeart } from "react-icons/fa"; // Icon trái tim
-import { useAuth } from "@clerk/clerk-react"; // Sử dụng Clerk để lấy user
+//import { FaHeart, FaRegHeart } from "react-icons/fa"; // Icon trái tim
+//import { useAuth } from "@clerk/clerk-react"; // Sử dụng Clerk để lấy user
+
+//Biểu tượng bookmark để lưu công việc yêu thích.
 import { FaBookmark, FaRegBookmark } from "react-icons/fa";
+
+// Component này nhận một đối tượng job, chứa thông tin về công việc (title, location, level, description,...).
 const JobCard = ({ job }) => {
 
     const navigate = useNavigate()
 
     // test
+    //isFavorite: true nếu công việc đã được lưu vào danh sách yêu thích, ngược lại là false.
     const [isFavorite, setIsFavorite] = useState(false);
     useEffect(() => {
         const savedJobs = JSON.parse(localStorage.getItem("favoriteJobs")) || [];

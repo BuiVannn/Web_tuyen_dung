@@ -3,6 +3,7 @@ import Navbar from "../components/Navbar";
 import { assets, jobsApplied } from "../assets/assets";
 import moment from "moment";
 import Footer from "../components/Footer";
+import SalaryComparison from "../components/SalaryComparison";
 
 const Applications = () => {
 
@@ -68,6 +69,9 @@ const Applications = () => {
                     </tbody>
                 </table>
             </div>
+
+            {/* test */}
+            <SalaryComparison />
             <Footer />
         </>
     )
