@@ -21,6 +21,13 @@ app.use(cors())
 
 app.use(express.json())
 
+// fix bug
+app.use((req, res, next) => {
+    console.log(`Incoming Request: ${req.method} ${req.url}`);
+    next();
+});
+
+
 // routes
 app.get('/', (req, res) => res.send("API Working"))
 
