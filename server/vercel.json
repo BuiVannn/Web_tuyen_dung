@@ -3,18 +3,26 @@
     "builds": [
         {
             "src": "server.js",
-            "use": "@vercel/node",
-            "config": {
-                "includeFiles": [
-                    "dist/**"
-                ]
-            }
+            "use": "@vercel/node"
         }
     ],
     "routes": [
         {
+            "src": "/api/webhooks(.*)",
+            "dest": "server.js",
+            "methods": [
+                "POST"
+            ],
+            "continue": true
+        },
+        {
             "src": "/(.*)",
             "dest": "server.js"
         }
-    ]
+    ],
+    "functions": {
+        "api/webhooks/**": {
+            "maxDuration": 30
+        }
+    }
 }
