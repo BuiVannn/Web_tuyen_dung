@@ -10,26 +10,21 @@
 
 // export default connectDB
 
-
 import mongoose from "mongoose";
 
-let isConnected = false;
-
 const connectDB = async () => {
-    if (isConnected) {
-        console.log("Using existing database connection");
-        return;
+    try {
+        mongoose.connection.on('connected', () => console.log('Database connected'));
+
+        await mongoose.connect(process.env.MONGODB_URI, {
+            dbName: "job-portal", // Chỉ định tên database thay vì thêm vào URI
+        });
+
+        console.log("MongoDB Connected Successfully");
+    } catch (error) {
+        console.error("MongoDB Connection Error:", error);
+        process.exit(1);
     }
-
-    mongoose.connection.on("connected", () => {
-        console.log("Database connected");
-        isConnected = true;
-    });
-
-    await mongoose.connect(`${process.env.MONGODB_URI}/job-portal`, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-    });
 };
 
 export default connectDB;
