@@ -18,14 +18,20 @@ await connectDB()
 // Middlewares
 
 app.use(cors())
+// fix
+// app.use(cors({
+// origin: "https://web-tuyen-dung-server.vercel.app",
+// methods: "GET,POST,PUT,DELETE",
+// credentials: true
+// }));
 
 app.use(express.json())
 
 // fix bug
-app.use((req, res, next) => {
-    console.log(`Incoming Request: ${req.method} ${req.url}`);
-    next();
-});
+// app.use((req, res, next) => {
+// console.log(`Incoming Request: ${req.method} ${req.url}`);
+// next();
+// });
 
 
 // routes
