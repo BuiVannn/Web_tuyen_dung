@@ -9,12 +9,32 @@ export const clerkWebhooks = async (req, res) => {
         // creat a svix instance with clerk webhook secret.
         // const whook = new Webhook(process.env.CLERK_WEBHOOK_SECRET)
 
-        //Verifying Headers
+        // Verifying Headers
         // await whook.verify(JSON.stringify(req.body), {
         // "svix-id": req.headers["svix-id"],
         // "svix-timestamp": req.headers["svix-timestamp"],
         // "svix-signature": req.headers["svix-signature"]
         // })
+
+        const isLocal = process.env.NODE_ENV === "development";
+
+        if (!isLocal) {
+            try {
+                const whook = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
+                const payload = whook.verify(JSON.stringify(req.body), {
+                    "svix-id": req.headers["svix-id"],
+                    "svix-timestamp": req.headers["svix-timestamp"],
+                    "svix-signature": req.headers["svix-signature"]
+                });
+                console.log("✅ Webhook verified successfully:", payload);
+            } catch (error) {
+                console.error("🔴 Webhook verification failed:", error);
+                return res.status(400).json({ error: "Invalid webhook signature" });
+            }
+        } else {
+            console.log("⚠️ Running in local mode, skipping webhook verification.");
+        }
+
 
         // getting data from request body
         const { data, type } = req.body
