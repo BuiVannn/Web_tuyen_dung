@@ -27,6 +27,8 @@ app.use(cors())
 
 app.use(express.json())
 
+// test
+app.use('/webhooks', express.raw({ type: 'application/json' }));
 // fix bug
 // app.use((req, res, next) => {
 // console.log(`Incoming Request: ${req.method} ${req.url}`);
@@ -41,8 +43,9 @@ app.get("/debug-sentry", function mainHandler(req, res) {
     throw new Error("My first Sentry error!");
 });
 
-//app.post('/webhooks', clerkWebhooks)
-app.post('/webhooks', express.raw({ type: "application/json" }), clerkWebhooks);
+app.post('/webhooks', clerkWebhooks)
+
+
 // Port
 
 const PORT = process.env.PORT || 5000
