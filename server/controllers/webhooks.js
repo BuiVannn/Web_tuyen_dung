@@ -20,19 +20,49 @@ export const clerkWebhooks = async (req, res) => {
         console.log("🔹 Raw Body nhận được:", req.body); // Kiểm tra body có bị thay đổi không
 
         try {
-            const whook = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
-            const payload = whook.verify(req.body.toString(), {
-                "svix-id": req.headers["svix-id"],
-                "svix-timestamp": req.headers["svix-timestamp"],
-                "svix-signature": req.headers["svix-signature"]
+            const headers = req.headers;
+            const svixId = headers["svix-id"];
+            const svixTimestamp = headers["svix-timestamp"];
+            const svixSignature = headers["svix-signature"];
+
+            if (!svixId || !svixTimestamp || !svixSignature) {
+                return res.status(400).json({ error: "Missing webhook headers" });
+            }
+
+            // Kiểm tra nếu rawBody không tồn tại (có thể do body-parser gây lỗi)
+            if (!req.rawBody) {
+                return res.status(400).json({ error: "Missing rawBody" });
+            }
+
+            const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
+
+            // Xác thực webhook
+            const event = wh.verify(req.rawBody, {
+                "svix-id": svixId,
+                "svix-timestamp": svixTimestamp,
+                "svix-signature": svixSignature
             });
 
-            console.log("✅ Webhook verified:", payload);
-            return res.status(200).json({ message: "Webhook received successfully" });
+            console.log("✅ Webhook verified:", event);
+
+            res.status(200).json({ success: true });
         } catch (error) {
-            console.error("🔴 Webhook verification failed:", error);
-            return res.status(400).json({ error: "Invalid webhook signature" });
+            console.error("❌ Webhook verification failed:", error);
+            res.status(400).json({ error: "Invalid webhook signature" });
         }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
