@@ -19,21 +19,21 @@ await connectDB()
 
 app.use(cors())
 // fix
-// app.use(cors({
-// origin: "https://web-tuyen-dung-server.vercel.app",
-// methods: "GET,POST,PUT,DELETE",
-// credentials: true
-// }));
+app.use(cors({
+    origin: "https://web-tuyen-dung-server.vercel.app",
+    methods: "GET,POST,PUT,DELETE",
+    credentials: true
+}));
 
 app.use(express.json())
 
 // test
-app.use('/webhooks', express.raw({ type: 'application/json' }));
+//app.use('/webhooks', express.raw({ type: 'application/json' }));
 // fix bug
-// app.use((req, res, next) => {
-// console.log(`Incoming Request: ${req.method} ${req.url}`);
-// next();
-// });
+app.use((req, res, next) => {
+    console.log(`Incoming Request: ${req.method} ${req.url}`);
+    next();
+});
 
 
 // routes
