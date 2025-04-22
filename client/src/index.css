@@ -1,15 +1,47 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
 
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 @import "tailwindcss";
 
-* {
-    font-family: Outfit;
+
+:root {
+    --font-primary: 'Inter', 'Roboto', system-ui, -apple-system, BlinkMacSystemFont,
+        'Segoe UI', Oxygen, Ubuntu, Cantarell, 'Open Sans',
+        'Helvetica Neue', sans-serif;
 }
+
+* {
+    font-family: var(--font-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* * { */
+/* font-family: Outfit; */
+/* } */
 
 @layer base {
     html {
         scroll-behavior: smooth;
+        font-family: var(--font-primary);
     }
+
+    body {
+        font-family: var(--font-primary);
+        font-size: 16px;
+        line-height: 1.5;
+        color: #252525;
+    }
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-primary);
+    letter-spacing: -0.025em;
 }
 
 ::-webkit-scrollbar {
@@ -83,4 +115,308 @@
     font-weight: 800;
     color: #252525;
     margin: 10px;
+}
+
+/* Add to your CSS file or style block */
+.pdf-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+}
+
+.pdf-container iframe {
+    border: none;
+    width: 100%;
+    height: 100%;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.8);
+}
+
+/* Thêm vào file index.css hoặc tailwind.css */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.7s ease-in-out;
+}
+
+.animate-fade-in-delayed {
+    animation: fadeIn 0.7s ease-in-out 0.3s forwards;
+    opacity: 0;
+}
+
+.animate-fade-up {
+    animation: fadeInUp 0.5s ease-out 0.6s forwards;
+    opacity: 0;
+}
+
+/* Thêm vào file index.css hoặc tailwind.css */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scroll {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(calc(-120px * 6));
+    }
+}
+
+@keyframes scrollReverse {
+    0% {
+        transform: translateX(calc(-120px * 6));
+    }
+
+    100% {
+        transform: translateX(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.7s ease-in-out;
+}
+
+.animate-fade-in-delayed {
+    animation: fadeIn 0.7s ease-in-out 0.3s forwards;
+    opacity: 0;
+}
+
+.animate-fade-up {
+    animation: fadeInUp 0.5s ease-out 0.6s forwards;
+    opacity: 0;
+}
+
+.animate-scroll {
+    animation: scroll 30s linear infinite;
+}
+
+.animate-scroll-reverse {
+    animation: scrollReverse 30s linear infinite;
+}
+
+.logos-slide {
+    display: flex;
+    width: calc(120px * 12);
+}
+
+.logos-slide-reverse {
+    display: flex;
+    width: calc(120px * 12);
+}
+
+/* Thêm vào file index.css hoặc tailwind.css của bạn */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-down {
+    animation: slideDown 0.3s ease-out forwards;
+}
+
+/* Thêm vào cuối file index.css */
+@layer utilities {
+    .line-clamp-1 {
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 1;
+    }
+
+    .line-clamp-2 {
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+
+    .line-clamp-3 {
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+    }
+}
+
+/* Thêm vào cuối file index.css */
+
+/* Custom filter styles */
+.filter-section {
+    position: relative;
+    padding-bottom: 1rem;
+}
+
+.filter-section:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(209, 213, 219, 0.7), transparent);
+}
+
+.filter-heading {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #4B5563;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.filter-item {
+    transition: transform 0.2s;
+}
+
+.filter-item:hover {
+    transform: translateX(2px);
+}
+
+.filter-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #D1D5DB;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.filter-checkbox:hover {
+    border-color: #3B82F6;
+    background-color: rgba(59, 130, 246, 0.05);
+}
+
+.filter-checkbox.checked {
+    background-color: #3B82F6;
+    border-color: #3B82F6;
+}
+
+/* Add these animation utilities to your global CSS */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromBottom {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-slide-up {
+    animation: slideInFromBottom 0.5s ease-out forwards;
+}
+
+.animate-pulse-slow {
+    animation: pulse 3s infinite ease-in-out;
+}
+
+.transition-all {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+.transition-transform {
+    transition-property: transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+.hover-scale:hover {
+    transform: scale(1.05);
+    transition: transform 0.2s ease;
 }

@@ -1,61 +1,122 @@
-import React from "react";
+import React, { useContext, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { assets } from "../assets/assets";
+import { AppContext } from "../context/AppContext";
 
 const Dashboard = () => {
+    const navigate = useNavigate();
+    const { companyData, setCompanyData, setCompanyToken, companyToken } = useContext(AppContext);
 
-    const navigate = useNavigate()
+    // Logout function
+    const logout = () => {
+        setCompanyToken(null);
+        setCompanyData(null);
+        localStorage.removeItem('companyToken');
+        navigate('/');
+    };
+
+    // Redirect to login if not authenticated
+    if (!companyToken) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center">
+                <h2 className="text-2xl font-semibold mb-4">Access Denied</h2>
+                <p className="text-gray-600 mb-4">Please login as a recruiter to access the dashboard</p>
+                <button
+                    onClick={() => navigate('/', { state: { showRecruiterLogin: true } })}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                >
+                    Login as Recruiter
+                </button>
+            </div>
+        );
+    }
+
+    // Show loading spinner while company data is being fetched
+    if (!companyData) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen">
-
-            {/* navbar for recruiter panel */}
+            {/* Header */}
             <div className="shadow py-4">
                 <div className="px-5 flex justify-between items-center">
-                    <img onClick={e => navigate('/')} className="max-sm:w-32 cursor-pointer" src={assets.logo} alt="" />
+                    <img
+                        onClick={() => navigate('/')}
+                        className="max-sm:w-32 cursor-pointer"
+                        src={assets.logo}
+                        alt=""
+                    />
                     <div className="flex items-center gap-3">
-                        <p className="max-sm:hidden">Welcome, BuiVan</p>
-                        <div className="relative group">
-                            <img className="w-8 border rounded-full" src={assets.company_icon} alt="" />
-                            <div className="absolute hidden group-hover:block top-0 right-0 z-10 text-black rounded pt-12">
-                                <ul className="list-non m-0 p-2 bg-white rounded-md border text-sm ">
-                                    <li className="py-1 px-2 cursor-pointer pr-10">Logout</li>
+                        {/* Removed notification bell */}
 
-                                </ul>
-                            </div>
-                        </div>
+                        <p className="max-sm:hidden">Welcome, {companyData.name}</p>
+                        <button onClick={logout} className="text-sm text-red-600">
+                            Logout
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <div className="flex items-start">
-                {/* left sidebar with option to add, manage, view */}
-                <div className="inline-block min-h-screen border-r-2">
-                    <ul className="flex flex-col items-start pt-5 text-gray-800 ">
-                        {/* add job */}
-                        <NavLink className={({ isActive }) => ` flex items-center p-3 sm:px-6 gap-2 w-full hover:bg-gray-100 ${isActive && 'bg-blue-100 border-r-4 border-blue-500'}`} to={'/dashboard/add-job'}>
-                            <img className="min-w-4 " src={assets.add_icon} alt="" />
-                            <p className="max-sm:hidden">Add Job</p>
-                        </NavLink >
-                        {/* manage job */}
-                        <NavLink className={({ isActive }) => ` flex items-center p-3 sm:px-6 gap-2 w-full hover:bg-gray-100 ${isActive && 'bg-blue-100 border-r-4 border-blue-500'}`} to={'/dashboard/manage-jobs'}>
-                            <img className="min-w-4 " src={assets.home_icon} alt="" />
-                            <p className="max-sm:hidden">Manage Jobs</p>
+            {/* Dashboard Content */}
+            <div className="flex">
+                {/* Sidebar */}
+                <div className="w-64 min-h-screen bg-gray-50 border-r">
+                    <nav className="py-4">
+                        <NavLink
+                            to="/dashboard/profile"
+                            className={({ isActive }) =>
+                                `flex items-center px-4 py-2 ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700'}`
+                            }
+                        >
+                            Company Profile
                         </NavLink>
-                        {/* view jobs */}
-                        <NavLink className={({ isActive }) => ` flex items-center p-3 sm:px-6 gap-2 w-full hover:bg-gray-100 ${isActive && 'bg-blue-100 border-r-4 border-blue-500'}`} to={'/dashboard/view-applications'}>
-                            <img className="min-w-4 " src={assets.person_tick_icon} alt="" />
-                            <p className="max-sm:hidden">View Applications</p>
+                        <NavLink
+                            to="/dashboard/manage-jobs"
+                            className={({ isActive }) =>
+                                `flex items-center px-4 py-2 ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700'}`
+                            }
+                        >
+                            Manage Jobs
                         </NavLink>
-                    </ul>
+                        <NavLink
+                            to="/dashboard/add-job"
+                            className={({ isActive }) =>
+                                `flex items-center px-4 py-2 ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700'}`
+                            }
+                        >
+                            Add New Job
+                        </NavLink>
+                        <NavLink
+                            to="/dashboard/view-applications"
+                            className={({ isActive }) =>
+                                `flex items-center px-4 py-2 ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700'}`
+                            }
+                        >
+                            View Applications
+                        </NavLink>
+                        <NavLink
+                            to="/dashboard/interviews"
+                            className={({ isActive }) =>
+                                `flex items-center px-4 py-2 ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-700'}`
+                            }
+                        >
+                            Interviews
+                        </NavLink>
+                    </nav>
                 </div>
 
-                <div>
+                {/* Main Content */}
+                <div className="flex-1 p-8">
                     <Outlet />
                 </div>
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default Dashboard 
+export default Dashboard;

@@ -1,71 +1,139 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
-import AdminSidebar from '../../components/admin/AdminSidebar';
-import AdminHeader from '../../components/admin/AdminHeader';
+import axios from 'axios';
+import { toast } from 'react-toastify';
+import { AppContext } from '../../context/AppContext';
 import DataTable from '../../components/admin/DataTable';
+import Loading from '../../components/Loading';
 
 const CandidateManagement = () => {
     const [candidates, setCandidates] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState('all');
+    const { backendUrl } = useContext(AppContext);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [candidateToDelete, setCandidateToDelete] = useState(null);
 
-    // Giả lập việc fetch dữ liệu
-    useEffect(() => {
-        // Trong dự án thực tế, bạn sẽ gọi API ở đây
-        setTimeout(() => {
-            setCandidates([
-                { id: 1, name: 'Nguyễn Văn A', email: 'nguyenvana@example.com', phone: '0901234567', skills: 'React, JavaScript, HTML, CSS', status: 'active', created_at: '10/02/2025' },
-                { id: 2, name: 'Trần Thị B', email: 'tranthib@example.com', phone: '0912345678', skills: 'Angular, TypeScript, NodeJS', status: 'active', created_at: '15/02/2025' },
-                { id: 3, name: 'Lê Văn C', email: 'levanc@example.com', phone: '0923456789', skills: 'Vue, PHP, Laravel', status: 'inactive', created_at: '20/02/2025' },
-                { id: 4, name: 'Phạm Thị D', email: 'phamthid@example.com', phone: '0934567890', skills: 'Java, Spring Boot, SQL', status: 'active', created_at: '25/02/2025' },
-                { id: 5, name: 'Hoàng Văn E', email: 'hoangvane@example.com', phone: '0945678901', skills: 'Python, Django, React', status: 'pending', created_at: '01/03/2025' },
-            ]);
+    // Hàm fetchCandidates
+    const fetchCandidates = async () => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('adminToken');
+            if (!token) {
+                toast.error("Yêu cầu xác thực Admin.");
+                setLoading(false);
+                return;
+            }
+            const response = await axios.get(`${backendUrl}/api/admin/users`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.data.success) {
+                console.log('Dữ liệu Users từ API:', response.data.users);
+                setCandidates(response.data.users || []);
+            } else {
+                toast.error(response.data.message || "Không thể tải danh sách ứng viên.");
+            }
+        } catch (error) {
+            console.error("Lỗi tải danh sách ứng viên:", error);
+            toast.error(error.response?.data?.message || error.message || "Lỗi máy chủ.");
+        } finally {
             setLoading(false);
-        }, 1000);
-    }, []);
+        }
+    };
 
-    // Xử lý lọc và tìm kiếm
+    // useEffect
+    useEffect(() => {
+        if (backendUrl) { fetchCandidates(); }
+        else { toast.error("Lỗi cấu hình: Không tìm thấy backend URL."); setLoading(false); }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [backendUrl]);
+
+    // Hàm mở modal xác nhận xóa
+    const openDeleteConfirmation = (userId, userName) => {
+        setCandidateToDelete({ id: userId, name: userName || userId });
+        setShowDeleteModal(true);
+    };
+
+    // Hàm xử lý xóa ứng viên
+    const handleDelete = async () => {
+        if (!candidateToDelete) return;
+
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('adminToken');
+            if (!token) {
+                toast.error("Yêu cầu xác thực Admin.");
+                setShowDeleteModal(false);
+                setLoading(false);
+                return;
+            }
+
+            const response = await axios.delete(`${backendUrl}/api/admin/users/${candidateToDelete.id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (response.data.success) {
+                toast.success(response.data.message || `Đã xóa ứng viên "${candidateToDelete.name}"`);
+                setCandidates(prevCandidates => prevCandidates.filter(
+                    candidate => candidate._id !== candidateToDelete.id
+                ));
+            } else {
+                toast.error(response.data.message || "Xóa ứng viên thất bại.");
+            }
+        } catch (error) {
+            console.error("Lỗi xóa ứng viên:", error);
+            toast.error(error.response?.data?.message || error.message || "Lỗi máy chủ khi xóa ứng viên.");
+        } finally {
+            setLoading(false);
+            setShowDeleteModal(false);
+            setCandidateToDelete(null);
+        }
+    };
+
+    // filteredCandidates
     const filteredCandidates = candidates.filter(candidate => {
-        const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        const fullName = `${candidate.name || ''}`.trim();
+        const matchesSearch = fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             candidate.email.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesFilter = filterStatus === 'all' || candidate.status === filterStatus;
-        return matchesSearch && matchesFilter;
+        return matchesSearch;
     });
 
+    // columns
     const columns = [
-        { header: 'Tên ứng viên', accessor: 'name' },
-        { header: 'Email', accessor: 'email' },
-        { header: 'Số điện thoại', accessor: 'phone' },
-        { header: 'Kỹ năng', accessor: 'skills' },
         {
-            header: 'Trạng thái',
-            accessor: 'status',
-            cell: (value) => {
-                let color = '';
-                switch (value) {
-                    case 'active': color = 'bg-green-100 text-green-800'; break;
-                    case 'inactive': color = 'bg-red-100 text-red-800'; break;
-                    case 'pending': color = 'bg-yellow-100 text-yellow-800'; break;
-                    default: color = 'bg-gray-100 text-gray-800';
-                }
-                return <span className={`px-2 py-1 rounded ${color}`}>{value}</span>;
-            }
+            header: 'Tên ứng viên',
+            accessor: 'name',
+            cell: (nameValue) => nameValue || 'N/A'
         },
-        { header: 'Ngày đăng ký', accessor: 'created_at' },
+        {
+            header: 'Email',
+            accessor: 'email'
+        },
+        {
+            header: 'Ngày đăng ký',
+            accessor: 'createdAt',
+            cell: (value) => value ? new Date(value).toLocaleDateString('vi-VN') : 'N/A'
+        },
         {
             header: 'Hành động',
-            accessor: 'id',
-            cell: (value) => (
-                <div className="flex space-x-2">
-                    <Link to={`/admin/candidates/${value}`} className="text-blue-600 hover:text-blue-800">
+            accessor: '_id',
+            cell: (userId, row) => (
+                <div className="flex space-x-4">
+                    <Link
+                        to={`/admin/candidates/${userId}`}
+                        className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-2 py-1 rounded flex items-center"
+                        title="Xem chi tiết"
+                    >
                         <span className="material-icons text-sm">visibility</span>
+                        <span className="ml-1 text-xs">Xem</span>
                     </Link>
-                    <button className="text-green-600 hover:text-green-800">
-                        <span className="material-icons text-sm">edit</span>
-                    </button>
-                    <button className="text-red-600 hover:text-red-800">
+                    <button
+                        onClick={() => openDeleteConfirmation(userId, row.name)}
+                        className="bg-gray-50 hover:bg-gray-100 text-gray-600 px-2 py-1 rounded flex items-center"
+                        title="Xóa ứng viên"
+                    >
                         <span className="material-icons text-sm">delete</span>
+                        <span className="ml-1 text-xs">Xóa</span>
                     </button>
                 </div>
             )
@@ -73,57 +141,238 @@ const CandidateManagement = () => {
     ];
 
     return (
-        <div className="flex h-screen bg-gray-100">
-            <AdminSidebar />
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <AdminHeader title="Quản lý ứng viên" />
-                <main className="flex-1 overflow-y-auto p-6">
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <div className="flex flex-wrap justify-between items-center mb-6">
-                            <h3 className="text-lg font-semibold">Danh sách ứng viên</h3>
-                            <div className="flex space-x-4">
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        //placeholder="Tìm kiếm..."
-                                        className="border rounded-lg px-4 py-2 pl-10"
-                                        value={searchTerm}
-                                        onChange={e => setSearchTerm(e.target.value)}
-                                    />
-                                    <span className="material-icons absolute left-3 top-2.5 text-gray-400">search</span>
-                                </div>
-                                <select
-                                    className="border rounded-lg px-4 py-2"
-                                    value={filterStatus}
-                                    onChange={e => setFilterStatus(e.target.value)}
-                                >
-                                    <option value="all">Tất cả trạng thái</option>
-                                    <option value="active">Đang hoạt động</option>
-                                    <option value="inactive">Không hoạt động</option>
-                                    <option value="pending">Chờ xác nhận</option>
-                                </select>
-                                <button className="bg-primary text-white px-4 py-2 rounded-lg">
-                                    Xuất Excel
-                                </button>
-                            </div>
-                        </div>
-
-                        {loading ? (
-                            <div className="flex justify-center items-center py-10">
-                                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-                            </div>
-                        ) : (
-                            <DataTable
-                                columns={columns}
-                                data={filteredCandidates}
-                                emptyMessage="Không tìm thấy ứng viên nào"
+        <>
+            <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+                    <h3 className="text-lg font-semibold">Danh sách ứng viên</h3>
+                    <div className="flex items-center space-x-4">
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="Tìm theo tên hoặc email..."
+                                className="border rounded-lg px-4 py-2 pl-10"
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
                             />
-                        )}
+                            <span className="material-icons absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">search</span>
+                        </div>
+                        <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
+                            Xuất Excel (Chưa hoạt động)
+                        </button>
                     </div>
-                </main>
+                </div>
+
+                {/* Hiển thị Loading hoặc DataTable */}
+                {loading ? (
+                    <div className="flex justify-center items-center py-10">
+                        <Loading />
+                    </div>
+                ) : (
+                    <DataTable
+                        columns={columns}
+                        data={filteredCandidates}
+                        emptyMessage="Không tìm thấy ứng viên nào phù hợp"
+                    />
+                )}
             </div>
-        </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && candidateToDelete && (
+                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg p-6 max-w-md mx-auto">
+                        <div className="flex items-center justify-center text-red-500 mb-4">
+                            <span className="material-icons text-5xl">warning</span>
+                        </div>
+                        <h3 className="text-xl font-bold text-center mb-4">Xác nhận xóa ứng viên</h3>
+                        <p className="text-gray-600 mb-6 text-center">
+                            Bạn có chắc chắn muốn xóa ứng viên <span className="font-semibold">{candidateToDelete.name}</span>?<br />
+                            Tất cả thông tin và đơn ứng tuyển của ứng viên sẽ bị xóa vĩnh viễn.
+                        </p>
+                        <div className="flex justify-center space-x-4">
+                            <button
+                                onClick={() => {
+                                    setShowDeleteModal(false);
+                                    setCandidateToDelete(null);
+                                }}
+                                className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg flex-1"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg flex-1"
+                            >
+                                Xác nhận xóa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 
 export default CandidateManagement;
+// import React, { useState, useEffect, useContext } from 'react';
+// import { Link } from 'react-router-dom';
+// import axios from 'axios';
+// import { toast } from 'react-toastify';
+// import { AppContext } from '../../context/AppContext';
+// // ĐÃ XÓA import AdminSidebar
+// // ĐÃ XÓA import AdminHeader
+// import DataTable from '../../components/admin/DataTable';
+// import Loading from '../../components/Loading';
+
+// const CandidateManagement = () => {
+//     const [candidates, setCandidates] = useState([]);
+//     const [loading, setLoading] = useState(true);
+//     const [searchTerm, setSearchTerm] = useState('');
+//     const { backendUrl } = useContext(AppContext);
+
+//     // Hàm fetchCandidates giữ nguyên
+//     const fetchCandidates = async () => {
+//         setLoading(true);
+//         try {
+//             const token = localStorage.getItem('adminToken');
+//             if (!token) {
+//                 toast.error("Yêu cầu xác thực Admin.");
+//                 setLoading(false);
+//                 return;
+//             }
+//             const response = await axios.get(`${backendUrl}/api/admin/users`, {
+//                 headers: { Authorization: `Bearer ${token}` }
+//             });
+//             if (response.data.success) {
+//                 console.log('Dữ liệu Users từ API:', response.data.users);
+//                 setCandidates(response.data.users || []);
+//             } else {
+//                 toast.error(response.data.message || "Không thể tải danh sách ứng viên.");
+//             }
+//         } catch (error) {
+//             console.error("Lỗi tải danh sách ứng viên:", error);
+//             toast.error(error.response?.data?.message || error.message || "Lỗi máy chủ.");
+//         } finally {
+//             setLoading(false);
+//         }
+//     };
+
+//     // useEffect giữ nguyên
+//     useEffect(() => {
+//         if (backendUrl) { fetchCandidates(); }
+//         else { toast.error("Lỗi cấu hình: Không tìm thấy backend URL."); setLoading(false); }
+//         // eslint-disable-next-line react-hooks/exhaustive-deps
+//     }, [backendUrl]);
+
+//     // Hàm handleDelete giữ nguyên
+//     const handleDelete = async (userId, userName) => {
+//         if (window.confirm(`Bạn có chắc chắn muốn xóa ứng viên "${userName || userId}" không? Hành động này không thể hoàn tác.`)) { // Thêm fallback nếu userName rỗng
+//             setLoading(true);
+//             try {
+//                 const token = localStorage.getItem('adminToken');
+//                 if (!token) { toast.error("Yêu cầu xác thực Admin."); setLoading(false); return; }
+//                 const response = await axios.delete(`${backendUrl}/api/admin/users/${userId}`, {
+//                     headers: { Authorization: `Bearer ${token}` }
+//                 });
+//                 if (response.data.success) {
+//                     toast.success(response.data.message || `Đã xóa ứng viên "${userName || userId}"`);
+//                     setCandidates(prevCandidates => prevCandidates.filter(candidate => candidate._id !== userId));
+//                 } else {
+//                     toast.error(response.data.message || "Xóa ứng viên thất bại.");
+//                 }
+//             } catch (error) {
+//                 console.error("Lỗi xóa ứng viên:", error);
+//                 toast.error(error.response?.data?.message || error.message || "Lỗi máy chủ khi xóa ứng viên.");
+//             } finally {
+//                 setLoading(false);
+//             }
+//         }
+//     };
+
+//     // filteredCandidates giữ nguyên (lọc theo name, email)
+//     const filteredCandidates = candidates.filter(candidate => {
+//         const fullName = `${candidate.name || ''}`.trim(); // API trả về name
+//         const matchesSearch = fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//             candidate.email.toLowerCase().includes(searchTerm.toLowerCase());
+//         return matchesSearch;
+//     });
+
+//     // columns - Sửa lại cell cho cột Tên và onClick cho nút Delete
+//     const columns = [
+//         {
+//             header: 'Tên ứng viên',
+//             accessor: 'name', // Dùng accessor name
+//             cell: (nameValue) => nameValue || 'N/A' // Hiển thị trực tiếp giá trị name
+//         },
+//         { header: 'Email', accessor: 'email' },
+//         {
+//             header: 'Ngày đăng ký',
+//             accessor: 'createdAt',
+//             cell: (value) => value ? new Date(value).toLocaleDateString('vi-VN') : 'N/A'
+//         },
+//         // Trong phần định nghĩa columns, cập nhật cell của cột Action:
+
+//         {
+//             header: 'Hành động',
+//             accessor: '_id',
+//             cell: (userId, row) => (
+//                 <div className="flex space-x-2">
+//                     <Link to={`/admin/candidates/${userId}`} className="text-blue-600 hover:text-blue-800" title="Xem chi tiết">
+//                         <span className="material-icons text-sm">visibility</span>
+//                     </Link>
+//                     <button
+//                         onClick={() => handleDelete(userId, row.name)}
+//                         className="text-red-600 hover:text-red-800"
+//                         title="Xóa ứng viên"
+//                     >
+//                         <span className="material-icons text-sm">delete</span>
+//                     </button>
+//                 </div>
+//             )
+//         }
+
+//     ];
+
+//     // ** SỬA LẠI PHẦN RETURN **
+//     // Chỉ trả về nội dung cần hiển thị bên trong <Outlet/> của AdminLayout
+//     return (
+//         <> {/* Sử dụng Fragment thay cho các thẻ div layout cũ */}
+//             {/* Phần nội dung của trang Quản lý ứng viên */}
+//             <div className="bg-white rounded-lg shadow p-6">
+//                 <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
+//                     <h3 className="text-lg font-semibold">Danh sách ứng viên</h3>
+//                     <div className="flex items-center space-x-4">
+//                         {/* Search Input */}
+//                         <div className="relative">
+//                             <input
+//                                 type="text"
+//                                 placeholder="Tìm theo tên hoặc email..."
+//                                 className="border rounded-lg px-4 py-2 pl-10"
+//                                 value={searchTerm}
+//                                 onChange={e => setSearchTerm(e.target.value)}
+//                             />
+//                             <span className="material-icons absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">search</span>
+//                         </div>
+//                         <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
+//                             Xuất Excel (Chưa hoạt động)
+//                         </button>
+//                     </div>
+//                 </div>
+
+//                 {/* Hiển thị Loading hoặc DataTable */}
+//                 {loading ? (
+//                     <div className="flex justify-center items-center py-10">
+//                         <Loading />
+//                     </div>
+//                 ) : (
+//                     <DataTable
+//                         columns={columns}
+//                         data={filteredCandidates}
+//                         emptyMessage="Không tìm thấy ứng viên nào phù hợp"
+//                     />
+//                 )}
+//             </div>
+//         </>
+//     );
+// };
+
+// export default CandidateManagement;

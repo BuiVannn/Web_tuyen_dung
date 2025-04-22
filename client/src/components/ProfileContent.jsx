@@ -1,9 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import InfoTab from './tabs/InfoTab';
 import ResumeTab from './tabs/ResumeTab';
 import RecommendationsTab from './tabs/RecomendationsTab';
-const ProfileContent = ({ userData, recommendedJobs }) => {
+
+const ProfileContent = ({ userData }) => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('info');
+
+    // Đảm bảo rằng tab được chọn theo URL hash (ví dụ: #resume)
+    useEffect(() => {
+        const hash = window.location.hash.replace('#', '');
+        if (hash === 'resume' || hash === 'recommendations') {
+            setActiveTab(hash);
+        }
+    }, []);
+
+    // Cập nhật URL hash khi tab thay đổi
+    useEffect(() => {
+        if (activeTab !== 'info') {
+            window.location.hash = activeTab;
+        } else {
+            // Xóa hash nếu là tab mặc định
+            if (window.location.hash) {
+                window.history.pushState('', document.title, window.location.pathname);
+            }
+        }
+    }, [activeTab]);
 
     return (
         <div className="px-8 pb-8">
@@ -43,8 +66,8 @@ const ProfileContent = ({ userData, recommendedJobs }) => {
             {/* Tab Content */}
             <div className="mt-6">
                 {activeTab === 'info' && <InfoTab userData={userData} />}
-                {activeTab === 'resume' && <ResumeTab userData={userData} />}
-                {activeTab === 'recommendations' && <RecommendationsTab jobs={recommendedJobs} />}
+                {activeTab === 'resume' && <ResumeTab userData={userData} navigate={navigate} />}
+                {activeTab === 'recommendations' && <RecommendationsTab />}
             </div>
         </div>
     );
