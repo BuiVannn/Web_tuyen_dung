@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import { AppContext } from '../../context/AppContext';
 import DataTable from '../../components/admin/DataTable';
 import Loading from '../../components/Loading';
-
+import { useOutletContext } from 'react-router-dom';
 const CandidateManagement = () => {
     const [candidates, setCandidates] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -13,7 +13,7 @@ const CandidateManagement = () => {
     const { backendUrl } = useContext(AppContext);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [candidateToDelete, setCandidateToDelete] = useState(null);
-
+    const { setHeaderTitle } = useOutletContext() || {};
     // Hàm fetchCandidates
     const fetchCandidates = async () => {
         setLoading(true);
@@ -42,6 +42,11 @@ const CandidateManagement = () => {
     };
 
     // useEffect
+    useEffect(() => {
+        if (setHeaderTitle) {
+            setHeaderTitle("Quản lý ứng viên");
+        }
+    }, [setHeaderTitle]);
     useEffect(() => {
         if (backendUrl) { fetchCandidates(); }
         else { toast.error("Lỗi cấu hình: Không tìm thấy backend URL."); setLoading(false); }

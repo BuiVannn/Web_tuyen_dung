@@ -6,16 +6,21 @@ import {
     getCompanyJobApplicants,
     getCompanyPostedJobs,
     loginCompany,
-    postJob,
+    //postJob,
     registerCompany,
     getAllApplications,
     getApplicantsForJob,
     updateApplicationStatusByCompany,
-    toggleJobVisibility,
+    //toggleJobVisibility,
     // Thêm controllers mới
     updateCompanyProfile,
     uploadCompanyImage,
-    getCompanyStats
+    getCompanyStats,
+    getCompanyProfile,
+    getApplicationDetail,
+    //getJobDetails,
+    //updateJob,
+    //deleteJob
 } from '../controllers/companyController.js'
 import upload from '../config/multer.js'
 import { protectCompany } from '../middlewares/authMiddleware.js'
@@ -264,7 +269,7 @@ const router = express.Router()
  *         description: Lỗi server
  */
 router.post('/register', upload.single('image'), registerCompany)
-
+// ok
 /**
  * @swagger
  * /api/companies/login:
@@ -309,7 +314,7 @@ router.post('/register', upload.single('image'), registerCompany)
  *         description: Lỗi server
  */
 router.post('/login', loginCompany)
-
+// ok
 // Protected routes
 /**
  * @swagger
@@ -338,7 +343,7 @@ router.post('/login', loginCompany)
  *         description: Lỗi server
  */
 router.get('/company', protectCompany, getCompanyData)
-
+// ok
 /**
  * @swagger
  * /api/companies/profile:
@@ -366,7 +371,7 @@ router.get('/company', protectCompany, getCompanyData)
  *       500:
  *         description: Lỗi server
  */
-router.get('/profile', protectCompany, getCompanyData) // Alias cho /company
+//router.get('/profile', protectCompany, getCompanyData) // Alias cho /company
 
 /**
  * @swagger
@@ -422,8 +427,8 @@ router.get('/profile', protectCompany, getCompanyData) // Alias cho /company
  *       500:
  *         description: Lỗi server
  */
-router.put('/profile', protectCompany, updateCompanyProfile) // Thêm route mới để cập nhật profile
-
+router.put('/profile', protectCompany, updateCompanyProfile)
+// ok
 /**
  * @swagger
  * /api/companies/upload-image:
@@ -470,7 +475,7 @@ router.put('/profile', protectCompany, updateCompanyProfile) // Thêm route mớ
  *         description: Lỗi server
  */
 router.post('/upload-image', protectCompany, upload.single('image'), uploadCompanyImage) // Thêm route mới để upload image
-
+// ok
 /**
  * @swagger
  * /api/companies/stats:
@@ -511,7 +516,7 @@ router.post('/upload-image', protectCompany, upload.single('image'), uploadCompa
  *         description: Lỗi server
  */
 router.get('/stats', protectCompany, getCompanyStats) // Thêm route mới để lấy stats
-
+// ok
 // Jobs routes
 /**
  * @swagger
@@ -592,7 +597,7 @@ router.get('/stats', protectCompany, getCompanyStats) // Thêm route mới để
  *       500:
  *         description: Lỗi server
  */
-router.post('/post-job', protectCompany, postJob)
+//router.post('/post-job', protectCompany, postJob)
 
 /**
  * @swagger
@@ -630,7 +635,7 @@ router.post('/post-job', protectCompany, postJob)
  *         description: Lỗi server
  */
 router.get('/applicants', protectCompany, getCompanyJobApplicants)
-
+// ok
 /**
  * @swagger
  * /api/companies/list-jobs:
@@ -667,7 +672,7 @@ router.get('/applicants', protectCompany, getCompanyJobApplicants)
  *         description: Lỗi server
  */
 router.get('/list-jobs', protectCompany, getCompanyPostedJobs)
-
+// ok
 /**
  * @swagger
  * /api/companies/change-status:
@@ -719,51 +724,8 @@ router.get('/list-jobs', protectCompany, getCompanyPostedJobs)
  *         description: Lỗi server
  */
 router.post('/change-status', protectCompany, ChangeJobApplicationsStatus)
+// ok
 
-/**
- * @swagger
- * /api/companies/change-visiblity:
- *   post:
- *     summary: Thay đổi trạng thái hiển thị công việc
- *     tags: [Job Management]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - jobId
- *             properties:
- *               jobId:
- *                 type: string
- *                 description: ID của công việc
- *     responses:
- *       200:
- *         description: Cập nhật trạng thái hiển thị thành công
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Job visibility updated successfully"
- *                 job:
- *                   $ref: '#/components/schemas/Job'
- *       401:
- *         description: Không có quyền truy cập
- *       404:
- *         description: Không tìm thấy công việc
- *       500:
- *         description: Lỗi server
- */
-router.post('/change-visiblity', protectCompany, changeVisiblity)
 
 // Job specific routes
 /**
@@ -810,7 +772,7 @@ router.post('/change-visiblity', protectCompany, changeVisiblity)
  *         description: Lỗi server
  */
 router.get('/jobs/:jobId/applicants', protectCompany, getApplicantsForJob)
-
+// ok
 /**
  * @swagger
  * /api/companies/jobs/{jobId}/visibility:
@@ -861,7 +823,7 @@ router.get('/jobs/:jobId/applicants', protectCompany, getApplicantsForJob)
  *       500:
  *         description: Lỗi server
  */
-router.patch('/jobs/:jobId/visibility', protectCompany, toggleJobVisibility)
+//router.patch('/jobs/:jobId/visibility', protectCompany, toggleJobVisibility)
 
 /**
  * @swagger
@@ -922,7 +884,7 @@ router.patch('/jobs/:jobId/visibility', protectCompany, toggleJobVisibility)
  *         description: Lỗi server
  */
 router.patch('/applications/:applicationId/status', protectCompany, updateApplicationStatusByCompany)
-
+// ok
 /**
  * @swagger
  * /api/companies/all-applications:
@@ -977,153 +939,10 @@ router.patch('/applications/:applicationId/status', protectCompany, updateApplic
  *         description: Lỗi server
  */
 router.get('/all-applications', protectCompany, getAllApplications);
+// ok
+router.get('/applications/:applicationId/detail', protectCompany, getApplicationDetail);
+// ok
+router.get('/profile', protectCompany, getCompanyProfile);
+// ok
 
 export default router
-// import express from 'express'
-// import {
-//     ChangeJobApplicationsStatus,
-//     changeVisiblity,
-//     getCompanyData,
-//     getCompanyJobApplicants,
-//     getCompanyPostedJobs,
-//     loginCompany,
-//     postJob,
-//     registerCompany,
-//     getAllApplications,
-//     getApplicantsForJob,
-//     updateApplicationStatusByCompany,
-//     toggleJobVisibility,
-//     // Thêm controllers mới
-//     updateCompanyProfile,
-//     uploadCompanyImage,
-//     getCompanyStats
-// } from '../controllers/companyController.js'
-// import upload from '../config/multer.js'
-// import { protectCompany } from '../middlewares/authMiddleware.js'
-
-// const router = express.Router()
-
-// // Auth routes
-// router.post('/register', upload.single('image'), registerCompany)
-// router.post('/login', loginCompany)
-
-// // Protected routes
-// router.get('/company', protectCompany, getCompanyData)
-// router.get('/profile', protectCompany, getCompanyData) // Alias cho /company
-// router.put('/profile', protectCompany, updateCompanyProfile) // Thêm route mới để cập nhật profile
-// router.post('/upload-image', protectCompany, upload.single('image'), uploadCompanyImage) // Thêm route mới để upload image
-// router.get('/stats', protectCompany, getCompanyStats) // Thêm route mới để lấy stats
-
-// // Jobs routes
-// router.post('/post-job', protectCompany, postJob)
-// router.get('/applicants', protectCompany, getCompanyJobApplicants)
-// router.get('/list-jobs', protectCompany, getCompanyPostedJobs)
-// router.post('/change-status', protectCompany, ChangeJobApplicationsStatus)
-// router.post('/change-visiblity', protectCompany, changeVisiblity)
-
-// // Job specific routes
-// router.get('/jobs/:jobId/applicants', protectCompany, getApplicantsForJob)
-// router.patch('/jobs/:jobId/visibility', protectCompany, toggleJobVisibility)
-// router.patch('/applications/:applicationId/status', protectCompany, updateApplicationStatusByCompany)
-// router.get('/applicants', protectCompany, getAllApplications);
-
-// export default router
-// // import express from 'express'
-// // import {
-// //     ChangeJobApplicationsStatus,
-// //     changeVisiblity,
-// //     getCompanyData,
-// //     getCompanyJobApplicants,
-// //     getCompanyPostedJobs,
-// //     loginCompany,
-// //     postJob,
-// //     registerCompany,
-// //     getAllApplications,
-// //     getApplicantsForJob,
-// //     updateApplicationStatusByCompany,
-// //     toggleJobVisibility,
-// //     updateCompanyProfile,
-// //     uploadCompanyImage,
-// //     getCompanyStats
-// // } from '../controllers/companyController.js'
-// // import upload from '../config/multer.js'
-// // import { protectCompany } from '../middlewares/authMiddleware.js'
-
-// // const router = express.Router()
-
-// // // Auth routes
-// // router.post('/register', upload.single('image'), registerCompany)
-// // router.post('/login', loginCompany)
-
-// // // Protected routes
-// // router.get('/company', protectCompany, getCompanyData)
-// // router.post('/post-job', protectCompany, postJob)
-// // router.get('/applicants', protectCompany, getCompanyJobApplicants)
-
-// // // Jobs related routes
-// // router.get('/list-jobs', protectCompany, getCompanyPostedJobs) // This replaces the /jobs route
-// // //router.get('/list-jobs', protectCompany, getCompanyJobs);
-// // router.post('/change-status', protectCompany, ChangeJobApplicationsStatus)
-// // router.post('/change-visiblity', protectCompany, changeVisiblity)
-
-// // // Job specific routes
-// // router.get('/jobs/:jobId/applicants', protectCompany, getApplicantsForJob)
-// // router.patch('/jobs/:jobId/visibility', protectCompany, toggleJobVisibility)
-// // router.patch('/applications/:applicationId/status', protectCompany, updateApplicationStatusByCompany)
-// // //router.get('/jobs/:jobId/applicants', protectCompany, getJobApplicants);
-// // router.get('/applicants', protectCompany, getAllApplications);
-
-// // export default router
-
-// // import express from 'express'
-// // import {
-// //     ChangeJobApplicationsStatus, changeVisiblity, getCompanyData, getCompanyJobApplicants, getCompanyPostedJobs, loginCompany, postJob, registerCompany, getApplicantsForJob,
-// //     updateApplicationStatusByCompany, toggleJobVisibility
-// // } from '../controllers/companyController.js'
-// // import upload from '../config/multer.js'
-// // import { protectCompany } from '../middlewares/authMiddleware.js'
-// // import { authMiddleware } from '../middlewares/authMiddleware.js';
-// // const router = express.Router()
-
-// // // register a company
-
-// // router.post('/register', upload.single('image'), registerCompany)
-
-
-// // // company login
-
-// // router.post('/login', loginCompany)
-
-// // router.get('/jobs', authMiddleware, getCompanyJobs); // Changed from list-jobs to jobs
-// // router.patch('/jobs/:jobId/visibility', authMiddleware, toggleJobVisibility);
-
-
-// // // get company data
-// // router.get('/company', protectCompany, getCompanyData)
-
-// // // post a job
-
-// // router.post('/post-job', protectCompany, postJob)
-
-// // // get applicants data of company
-// // router.get('/applicants', protectCompany, getCompanyJobApplicants)
-
-// // // get company job list
-// // router.get('/list-jobs', protectCompany, getCompanyPostedJobs)
-
-// // // change applicantions status
-
-// // router.post('/change-status', protectCompany, ChangeJobApplicationsStatus)
-
-// // // change applications visiblity
-// // router.post('/change-visiblity', protectCompany, changeVisiblity)
-
-// // // Lấy ứng viên cho MỘT job cụ thể
-// // router.get('/jobs/:jobId/applicants', protectCompany, getApplicantsForJob);
-
-// // // Cập nhật trạng thái cho MỘT application cụ thể (Dùng PATCH)
-// // router.patch('/applications/:applicationId/status', protectCompany, updateApplicationStatusByCompany);
-
-// // //router.patch('/jobs/:jobId/visibility', protectCompany, toggleJobVisibility);
-// // //router.patch('/jobs/:id/visibility', protectCompany, toggleJobVisibility);
-// // export default router

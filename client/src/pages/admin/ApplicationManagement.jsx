@@ -7,7 +7,7 @@ import { toast } from 'react-toastify';
 import { AppContext } from '../../context/AppContext';
 import Loading from '../../components/Loading';
 import { Search, Filter, Eye, Trash2, AlertTriangle, X, Loader2 } from 'lucide-react';
-
+import { useOutletContext } from 'react-router-dom';
 // Helper function render status badge (tương tự JobsManagement)
 const renderStatusBadge = (status) => {
     let colorClasses = 'bg-gray-100 text-gray-800'; // Default for unknown/pending
@@ -47,10 +47,15 @@ const ApplicationManagement = () => {
 
     const { backendUrl } = useContext(AppContext);
     const itemsPerPage = 10;
-
+    const { setHeaderTitle } = useOutletContext() || {};
     // Các trạng thái đơn ứng tuyển
     //const applicationStatuses = ['pending', 'viewed', 'shortlisted', 'rejected', 'hired'];
 
+    useEffect(() => {
+        if (setHeaderTitle) {
+            setHeaderTitle("Quản lý đơn ứng tuyển");
+        }
+    }, [setHeaderTitle]);
     // Hàm fetch danh sách applications
     const fetchApplications = async () => {
         setLoading(true);

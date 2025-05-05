@@ -278,6 +278,25 @@ export const loginCompany_0 = async (req, res) => {
     }
 }
 
+// Thêm hàm logoutCompany vào cuối file
+export const logoutCompany = async (req, res) => {
+    try {
+        // Xử lý đăng xuất ở phía client, server chỉ trả về thành công
+        // (tương tự như cách làm với admin)
+        console.log("logout thanh cong");
+        res.status(200).json({
+            success: true,
+            message: 'Logged out successfully'
+        });
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error during logout',
+            error: error.message
+        });
+    }
+};
 // get company data
 // Sửa hàm getCompanyData để trả về đầy đủ thông tin
 export const getCompanyData = async (req, res) => {
@@ -381,17 +400,9 @@ export const getCompanyData_0 = async (req, res) => {
         });
     }
 };
-// export const getCompanyData = async (req, res) => {
-// try {
-// const company = req.company
-// res.json({ success: true, company })
-// } catch (error) {
-// res.json({ success: false, message: error.message })
-// }
-// }
 
 // post a new job
-export const postJob = async (req, res) => {
+export const postJob_cu = async (req, res) => {
     try {
         const {
             title,
@@ -533,42 +544,114 @@ export const postJob_0 = async (req, res) => {
 }
 
 // get company job applicant
-export const getCompanyJobApplicants_2 = async (req, res) => {
+export const getCompanyJobApplicants = async (req, res) => {
     try {
-        console.log('Company ID:', req.company._id);
+        const companyId = req.company._id;
+        console.log('Finding applications for company:', companyId);
 
-        const applications = await JobApplication.find({
-            company: req.company._id
-        })
+        // Tham số phân trang
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Tham số tìm kiếm
+        const keyword = req.query.keyword || "";
+
+        // Tham số sắp xếp - thêm mới
+        const sortBy = req.query.sortBy || "createdAt";
+        const sortOrder = req.query.sortOrder === "asc" ? 1 : -1;
+
+        // Tạo đối tượng sắp xếp
+        const sortOption = {};
+        sortOption[sortBy] = sortOrder;
+
+        // Tạo điều kiện lọc
+        const filter = { companyId };
+
+        // Thêm tìm kiếm nếu có keyword
+        if (keyword) {
+            filter.$or = [
+                { 'basicInfo.fullName': { $regex: keyword, $options: 'i' } },
+                // Thêm các trường khác để tìm kiếm nếu cần
+            ];
+        }
+
+        // Đếm tổng số lượng kết quả cho phân trang
+        const totalCount = await JobApplication.countDocuments(filter);
+
+        // Get all applications for this company with sorting and pagination
+        const applications = await JobApplication.find(filter)
             .populate({
-                path: 'user',
-                select: 'name email resume',
-                // Add match condition if needed
-                match: { _id: { $type: 'string' } }
+                path: 'userId',
+                select: 'name email image resume education experience skills phone',
+                model: 'User'
             })
-            .populate('job', 'title')
-            .sort('-createdAt')
+            .populate({
+                path: 'jobId',
+                select: 'title description location category salary type experience',
+                model: 'Job'
+            })
+            .sort(sortOption)  // Áp dụng sắp xếp động
+            .skip(skip)        // Áp dụng phân trang
+            .limit(limit)
             .lean();
 
-        console.log('Found applications:', applications.length);
+        const formattedApplications = applications.map(app => ({
+            _id: app._id,
+            status: app.status,
+            date: app.date || app.createdAt, // Thêm ngày nộp đơn
+            userId: {
+                _id: app.userId?._id || '',
+                name: app.userId?.name || app.basicInfo?.fullName || 'N/A',
+                email: app.userId?.email || app.basicInfo?.email || 'N/A',
+                image: app.userId?.image || app.userId?.avatar || '/default-avatar.jpg',
+                resume: app.userId?.resume || app.basicInfo?.resumeUrl || null,
+                education: app.userId?.education || [],
+                experience: app.userId?.experience || [],
+                skills: app.userId?.skills || [],
+                phone: app.userId?.phone || app.basicInfo?.phoneNumber || 'N/A'
+            },
+            jobId: {
+                _id: app.jobId?._id || '',
+                title: app.jobId?.title || 'N/A',
+                location: app.jobId?.location || 'N/A',
+                category: app.jobId?.category || 'N/A',
+                salary: app.jobId?.salary || 'N/A',
+                type: app.jobId?.type || 'N/A',
+                experience: app.jobId?.experience || 'N/A'
+            }
+        }));
 
-        // Filter out any null populated fields
-        const validApplications = applications.filter(app => app.user != null);
+        // Debug logs
+        console.log('Found valid applications:', formattedApplications.length);
 
-        res.json({
+        return res.json({
             success: true,
-            applications: validApplications
+            count: formattedApplications.length,
+            applications: formattedApplications,
+            pagination: {
+                total: totalCount,
+                page,
+                pages: Math.ceil(totalCount / limit),
+                limit
+            },
+            filters: {
+                keyword,
+                sortBy,
+                sortOrder: sortOrder === 1 ? "asc" : "desc"
+            }
         });
+
     } catch (error) {
         console.error('Error in getCompanyJobApplicants:', error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: 'Error fetching applications',
             error: error.message
         });
     }
 };
-export const getCompanyJobApplicants = async (req, res) => {
+export const getCompanyJobApplicants_cu = async (req, res) => {
     try {
         const companyId = req.company._id;
         console.log('Finding applications for company:', companyId);
@@ -658,201 +741,6 @@ export const getCompanyJobApplicants = async (req, res) => {
         });
     }
 };
-export const getCompanyJobApplicants_loi = async (req, res) => {
-    try {
-        const companyId = req.company._id;
-        console.log('Finding applications for company:', companyId);
-
-        const applications = await JobApplication.find({ companyId })
-            .populate({
-                path: 'userId',
-                select: 'name email image resume phone education experience skills',
-                match: { _id: { $type: 'objectId' } } // Only match MongoDB ObjectIds
-            })
-            .populate({
-                path: 'jobId',
-                select: 'title description location category level salary status'
-            })
-            .sort({ createdAt: -1 })
-            .lean();
-
-        console.log('Found applications:', applications.length);
-        console.log('Application IDs:', applications.map(app => ({
-            appId: app._id,
-            userId: app.userId?._id,
-            jobId: app.jobId?._id
-        })));
-
-        const validApplications = applications.filter(app =>
-            app.userId && mongoose.Types.ObjectId.isValid(app.userId._id)
-        );
-
-        // Group applications by job
-        const applicationsByJob = applications.reduce((acc, app) => {
-            const jobId = app.jobId._id.toString();
-            if (!acc[jobId]) {
-                acc[jobId] = {
-                    jobTitle: app.jobId.title,
-                    applications: []
-                };
-            }
-            acc[jobId].applications.push(app);
-            return acc;
-        }, {});
-
-        return res.json({
-            success: true,
-            count: validApplications.length,
-            applications: validApplications.map(app => ({
-                _id: app._id,
-                status: app.status,
-                date: app.date,
-                user: app.userId ? {
-                    _id: app.userId._id,
-                    name: app.userId.name,
-                    email: app.userId.email,
-                    phone: app.userId.phone,
-                    image: app.userId.image,
-                    resume: app.userId.resume
-                } : null,
-                job: app.jobId ? {
-                    _id: app.jobId._id,
-                    title: app.jobId.title,
-                    location: app.jobId.location,
-                    category: app.jobId.category,
-                    level: app.jobId.level,
-                    salary: app.jobId.salary
-                } : null
-            }))
-        });
-        // return res.json({
-        // success: true,
-        // count: applications.length,
-        // applicationsByJob,
-        // applications: applications.map(app => ({
-        // _id: app._id,
-        // status: app.status,
-        // date: app.date,
-        // user: {
-        // _id: app.userId?._id,
-        // name: app.userId?.name,
-        // email: app.userId?.email,
-        // phone: app.userId?.phone,
-        // image: app.userId?.image,
-        // resume: app.userId?.resume
-        // },
-        // job: {
-        // _id: app.jobId?._id,
-        // title: app.jobId?.title,
-        // location: app.jobId?.location,
-        // category: app.jobId?.category,
-        // level: app.jobId?.level,
-        // salary: app.jobId?.salary
-        // }
-        // }))
-        // });
-
-    } catch (error) {
-        console.error('Error in getCompanyJobApplicants:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error fetching applications',
-            error: error.message
-        });
-    }
-};
-export const getCompanyJobApplicants_1 = async (req, res) => {
-    try {
-        const companyId = req.company._id;
-
-        const applications = await JobApplication.find({ companyId })
-            .populate('userId', 'name email image resume phone education experience skills')
-            .populate('jobId', 'title description location category level salary status')
-            .sort({ createdAt: -1 })
-            .lean();
-
-        return res.json({
-            success: true,
-            count: applications.length,
-            applications: applications
-        });
-
-    } catch (error) {
-        console.error('Error in getCompanyJobApplicants:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error fetching applications'
-        });
-    }
-};
-export const getCompanyJobApplicants_0 = async (req, res) => {
-    try {
-        const companyId = req.company._id;
-
-        // Find all applications for the company
-        const applications = await JobApplication.find({ companyId })
-            .populate({
-                path: 'userId',
-                select: 'name email image resume phone education experience skills'
-            })
-            .populate({
-                path: 'jobId',
-                select: 'title description location category level salary status'
-            })
-            .sort({ createdAt: -1 })
-            .lean();
-
-        if (!applications) {
-            return res.status(404).json({
-                success: false,
-                message: 'No applications found'
-            });
-        }
-
-        // Format the response data
-        const formattedApplications = applications.map(app => ({
-            _id: app._id,
-            status: app.status,
-            date: app.date,
-            coverLetter: app.coverLetter,
-            portfolio: app.portfolio,
-            userId: {
-                _id: app.userId?._id,
-                name: app.userId?.name,
-                email: app.userId?.email,
-                phone: app.userId?.phone,
-                image: app.userId?.image,
-                resume: app.userId?.resume,
-                education: app.userId?.education,
-                experience: app.userId?.experience,
-                skills: app.userId?.skills
-            },
-            jobId: {
-                _id: app.jobId?._id,
-                title: app.jobId?.title,
-                location: app.jobId?.location,
-                category: app.jobId?.category,
-                level: app.jobId?.level,
-                salary: app.jobId?.salary,
-                status: app.jobId?.status
-            }
-        }));
-
-        return res.json({
-            success: true,
-            count: formattedApplications.length,
-            applications: formattedApplications
-        });
-
-    } catch (error) {
-        console.error('Error in getCompanyJobApplicants:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error fetching applications',
-            error: error.message
-        });
-    }
-};
 // export const getCompanyJobApplicants = async (req, res) => {
 // try {
 // const companyId = req.company._id
@@ -874,6 +762,155 @@ export const getCompanyJobApplicants_0 = async (req, res) => {
 // get company posted jobs
 
 export const getCompanyPostedJobs = async (req, res) => {
+    try {
+        const companyId = req.company._id;
+
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Search and filter parameters
+        const keyword = req.query.keyword || "";
+        const status = req.query.status || "all"; // "all", "active", "pending", "expired", etc.
+        const sortBy = req.query.sortBy || "createdAt"; // "createdAt", "title", "applicationsCount", etc.
+        const sortOrder = req.query.sortOrder === "asc" ? 1 : -1;
+
+        // Build match conditions for the aggregation
+        const matchConditions = {
+            companyId: new mongoose.Types.ObjectId(companyId)
+        };
+
+        // Add keyword search if provided
+        if (keyword) {
+            matchConditions.$or = [
+                { title: { $regex: keyword, $options: 'i' } },
+                { description: { $regex: keyword, $options: 'i' } },
+                { location: { $regex: keyword, $options: 'i' } }
+            ];
+        }
+
+        // Add status filter if not "all"
+        if (status && status !== "all") {
+            matchConditions.status = status;
+        }
+
+        // First get total count for pagination
+        const totalCount = await Job.countDocuments(matchConditions);
+
+        // Build sort option for aggregation
+        const sortOption = {};
+        sortOption[sortBy] = sortOrder;
+
+        // Aggregate to get jobs with application stats
+        const jobs = await Job.aggregate([
+            // Match jobs by company and other conditions
+            { $match: matchConditions },
+
+            // Lookup to join with applications
+            {
+                $lookup: {
+                    from: 'jobapplications',
+                    localField: '_id',
+                    foreignField: 'jobId',
+                    as: 'applicationsList'
+                }
+            },
+
+            // Add application stats
+            {
+                $addFields: {
+                    applicationsCount: { $size: "$applicationsList" },
+                    applicationStats: {
+                        pending: {
+                            $size: {
+                                $filter: {
+                                    input: "$applicationsList",
+                                    as: "app",
+                                    cond: { $eq: ["$$app.status", "pending"] }
+                                }
+                            }
+                        },
+                        viewed: {
+                            $size: {
+                                $filter: {
+                                    input: "$applicationsList",
+                                    as: "app",
+                                    cond: { $eq: ["$$app.status", "viewed"] }
+                                }
+                            }
+                        },
+                        shortlisted: {
+                            $size: {
+                                $filter: {
+                                    input: "$applicationsList",
+                                    as: "app",
+                                    cond: { $eq: ["$$app.status", "shortlisted"] }
+                                }
+                            }
+                        },
+                        interviewing: {
+                            $size: {
+                                $filter: {
+                                    input: "$applicationsList",
+                                    as: "app",
+                                    cond: { $eq: ["$$app.status", "interviewing"] }
+                                }
+                            }
+                        },
+                        hired: {
+                            $size: {
+                                $filter: {
+                                    input: "$applicationsList",
+                                    as: "app",
+                                    cond: { $eq: ["$$app.status", "hired"] }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+
+            // Remove the applicationsList from output
+            { $project: { applicationsList: 0 } },
+
+            // Sort the results
+            { $sort: sortOption },
+
+            // Apply pagination
+            { $skip: skip },
+            { $limit: limit }
+        ]);
+
+        console.log(`Found ${jobs.length} jobs for company ${companyId} (page ${page})`);
+
+        res.json({
+            success: true,
+            jobs,
+            pagination: {
+                total: totalCount,
+                page,
+                pages: Math.ceil(totalCount / limit),
+                limit
+            },
+            filters: {
+                keyword,
+                status,
+                sortBy,
+                sortOrder: sortOrder === 1 ? "asc" : "desc"
+            }
+        });
+
+    } catch (error) {
+        console.error('Error in getCompanyPostedJobs:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching company jobs',
+            error: error.message
+        });
+    }
+};
+export const getCompanyPostedJobs_4 = async (req, res) => {
     try {
         const companyId = req.company._id;
 
@@ -1122,49 +1159,699 @@ export const changeVisiblity = async (req, res) => {
 
 
 // Lấy tất cả đơn ứng tuyển (dành cho admin hoặc nhà tuyển dụng)
-export const getAllApplications = async (req, res) => {
+export const getAllApplications_ok = async (req, res) => {
     try {
-        const applications = await JobApplication.find()
-            .populate({
-                path: 'userId',
-                select: 'name email image resume phone education experience skills'
-            })
-            .populate({
-                path: 'jobId',
-                select: 'title description location category level salary'
-            })
-            .populate({
-                path: 'companyId',
-                select: 'name email image'
-            })
-            .sort({ createdAt: -1 })
-            .lean();
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
 
-        console.log('Found all applications:', applications.length);
+        // Filter parameters
+        const filter = {};
 
-        res.json({
-            success: true,
-            count: applications.length,
-            applications
-        });
+        // Filter by status
+        if (req.query.status && req.query.status !== 'all') {
+            filter.status = req.query.status;
+        }
+
+        // Filter by company
+        if (req.query.companyId && mongoose.Types.ObjectId.isValid(req.query.companyId)) {
+            filter.companyId = new mongoose.Types.ObjectId(req.query.companyId);
+        }
+
+        // Filter by job
+        if (req.query.jobId && mongoose.Types.ObjectId.isValid(req.query.jobId)) {
+            filter.jobId = new mongoose.Types.ObjectId(req.query.jobId);
+        }
+
+        // Search by keyword (in job title or candidate name)
+        if (req.query.keyword) {
+            const keyword = req.query.keyword;
+            // We'll need to use aggregation for this kind of search across relations
+            const applications = await JobApplication.aggregate([
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'userId',
+                        foreignField: '_id',
+                        as: 'userDetails'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'jobs',
+                        localField: 'jobId',
+                        foreignField: '_id',
+                        as: 'jobDetails'
+                    }
+                },
+                {
+                    $match: {
+                        $and: [
+                            filter,
+                            {
+                                $or: [
+                                    { 'userDetails.name': { $regex: keyword, $options: 'i' } },
+                                    { 'jobDetails.title': { $regex: keyword, $options: 'i' } }
+                                ]
+                            }
+                        ]
+                    }
+                },
+                { $skip: skip },
+                { $limit: limit }
+            ]);
+
+            const total = await JobApplication.aggregate([
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'userId',
+                        foreignField: '_id',
+                        as: 'userDetails'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'jobs',
+                        localField: 'jobId',
+                        foreignField: '_id',
+                        as: 'jobDetails'
+                    }
+                },
+                {
+                    $match: {
+                        $and: [
+                            filter,
+                            {
+                                $or: [
+                                    { 'userDetails.name': { $regex: keyword, $options: 'i' } },
+                                    { 'jobDetails.title': { $regex: keyword, $options: 'i' } }
+                                ]
+                            }
+                        ]
+                    }
+                },
+                { $count: 'total' }
+            ]);
+
+            const totalCount = total.length > 0 ? total[0].total : 0;
+
+            // Need to populate after aggregation
+            const populatedApplications = await JobApplication.populate(applications, [
+                {
+                    path: 'userId',
+                    select: 'name email image resume phone education experience skills'
+                },
+                {
+                    path: 'jobId',
+                    select: 'title description location category level salary'
+                },
+                {
+                    path: 'companyId',
+                    select: 'name email image'
+                }
+            ]);
+
+            return res.json({
+                success: true,
+                count: totalCount,
+                applications: populatedApplications,
+                pagination: {
+                    total: totalCount,
+                    page,
+                    pages: Math.ceil(totalCount / limit),
+                    limit
+                }
+            });
+        } else {
+            // Without keyword search, we can use the simpler approach
+            // Get total count
+            const totalCount = await JobApplication.countDocuments(filter);
+
+            // Sort options
+            const sortField = req.query.sortBy || 'createdAt';
+            const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+            const sortOptions = {};
+            sortOptions[sortField] = sortOrder;
+
+            // Execute query with pagination
+            const applications = await JobApplication.find(filter)
+                .populate({
+                    path: 'userId',
+                    select: 'name email image resume phone education experience skills'
+                })
+                .populate({
+                    path: 'jobId',
+                    select: 'title description location category level salary'
+                })
+                .populate({
+                    path: 'companyId',
+                    select: 'name email image'
+                })
+                .sort(sortOptions)
+                .skip(skip)
+                .limit(limit)
+                .lean();
+
+            return res.json({
+                success: true,
+                count: totalCount,
+                applications,
+                pagination: {
+                    total: totalCount,
+                    page,
+                    pages: Math.ceil(totalCount / limit),
+                    limit
+                },
+                filters: {
+                    status: req.query.status || 'all',
+                    companyId: req.query.companyId,
+                    jobId: req.query.jobId,
+                    sortBy: sortField,
+                    sortOrder: req.query.sortOrder || 'desc'
+                }
+            });
+        }
     } catch (error) {
         console.error('Error in getAllApplications:', error);
         res.status(500).json({
             success: false,
-            message: error.message
+            message: 'Error fetching applications',
+            error: error.message
         });
     }
 };
-export const getAllApplications_0 = async (req, res) => {
-    try {
-        const applications = await JobApplication.find()
-            .populate('userId', 'name email')
-            .populate('jobId', 'title companyId')
-            .populate('companyId', 'name');
 
-        res.json({ success: true, applications });
+export const getAllApplications_ok1 = async (req, res) => {
+    try {
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Filter parameters
+        const filter = {};
+
+        // If company is making the request, only show their applications
+        if (req.company) {
+            filter.companyId = req.company._id;
+        }
+
+        // Filter by status
+        if (req.query.status && req.query.status !== 'all') {
+            filter.status = req.query.status;
+        }
+
+        // Filter by company
+        if (req.query.companyId && mongoose.Types.ObjectId.isValid(req.query.companyId)) {
+            filter.companyId = new mongoose.Types.ObjectId(req.query.companyId);
+        }
+
+        // Filter by job
+        if (req.query.jobId && mongoose.Types.ObjectId.isValid(req.query.jobId)) {
+            filter.jobId = new mongoose.Types.ObjectId(req.query.jobId);
+        }
+
+        // Search by keyword (in job title or candidate name)
+        if (req.query.keyword) {
+            const keyword = req.query.keyword;
+            // We'll need to use aggregation for this kind of search across relations
+            const applications = await JobApplication.aggregate([
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'userId',
+                        foreignField: '_id',
+                        as: 'userDetails'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'jobs',
+                        localField: 'jobId',
+                        foreignField: '_id',
+                        as: 'jobDetails'
+                    }
+                },
+                {
+                    $match: {
+                        $and: [
+                            filter,
+                            {
+                                $or: [
+                                    //{ 'userDetails.name': { $regex: keyword, $options: 'i' } },
+                                    { 'basicInfo.fullName': { $regex: keyword, $options: 'i' } }, // Thêm tìm kiếm theo tên trong form
+                                    { 'jobDetails.title': { $regex: keyword, $options: 'i' } }
+                                ]
+                            }
+                        ]
+                    }
+                },
+                { $skip: skip },
+                { $limit: limit }
+            ]);
+
+            const total = await JobApplication.aggregate([
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'userId',
+                        foreignField: '_id',
+                        as: 'userDetails'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'jobs',
+                        localField: 'jobId',
+                        foreignField: '_id',
+                        as: 'jobDetails'
+                    }
+                },
+                {
+                    $match: {
+                        $and: [
+                            filter,
+                            {
+                                $or: [
+                                    //{ 'userDetails.name': { $regex: keyword, $options: 'i' } },
+                                    { 'basicInfo.fullName': { $regex: keyword, $options: 'i' } }, // Thêm tìm kiếm theo tên trong form
+                                    { 'jobDetails.title': { $regex: keyword, $options: 'i' } }
+                                ]
+                            }
+                        ]
+                    }
+                },
+                { $count: 'total' }
+            ]);
+
+            const totalCount = total.length > 0 ? total[0].total : 0;
+
+            // Need to populate after aggregation
+            const populatedApplications = await JobApplication.populate(applications, [
+                {
+                    path: 'userId',
+                    select: 'name email image resume phone education experience skills'
+                },
+                {
+                    path: 'jobId',
+                    select: 'title description location category type experience salary'
+                },
+                {
+                    path: 'companyId',
+                    select: 'name email image'
+                }
+            ]);
+
+            return res.json({
+                success: true,
+                count: totalCount,
+                applications: populatedApplications,
+                pagination: {
+                    total: totalCount,
+                    page,
+                    pages: Math.ceil(totalCount / limit),
+                    limit
+                }
+            });
+        } else {
+            // Without keyword search, we can use the simpler approach
+            // Get total count
+            const totalCount = await JobApplication.countDocuments(filter);
+
+            // Sort options
+            const sortField = req.query.sortBy || 'createdAt';
+            const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+            const sortOptions = {};
+            sortOptions[sortField] = sortOrder;
+
+            // Execute query with pagination
+            const applications = await JobApplication.find(filter)
+                .populate({
+                    path: 'userId',
+                    select: 'name email image resume phone education experience skills'
+                })
+                .populate({
+                    path: 'jobId',
+                    select: 'title description location category type experience salary'
+                })
+                .populate({
+                    path: 'companyId',
+                    select: 'name email image'
+                })
+                .sort(sortOptions)
+                .skip(skip)
+                .limit(limit)
+                .lean();
+
+            return res.json({
+                success: true,
+                count: totalCount,
+                applications,
+                pagination: {
+                    total: totalCount,
+                    page,
+                    pages: Math.ceil(totalCount / limit),
+                    limit
+                },
+                filters: {
+                    status: req.query.status || 'all',
+                    companyId: req.query.companyId,
+                    jobId: req.query.jobId,
+                    sortBy: sortField,
+                    sortOrder: req.query.sortOrder || 'desc'
+                }
+            });
+        }
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error('Error in getAllApplications:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching applications',
+            error: error.message
+        });
+    }
+};
+export const getAllApplications = async (req, res) => {
+    try {
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Filter parameters
+        const filter = {};
+
+        // If company is making the request, only show their applications
+        if (req.company) {
+            filter.companyId = req.company._id;
+        }
+
+        // Filter by status
+        if (req.query.status && req.query.status !== 'all') {
+            filter.status = req.query.status;
+        }
+
+        // Filter by company
+        if (req.query.companyId && mongoose.Types.ObjectId.isValid(req.query.companyId)) {
+            filter.companyId = new mongoose.Types.ObjectId(req.query.companyId);
+        }
+
+        // Filter by job
+        if (req.query.jobId && mongoose.Types.ObjectId.isValid(req.query.jobId)) {
+            filter.jobId = new mongoose.Types.ObjectId(req.query.jobId);
+        }
+
+        // Search by keyword (in job title or candidate name)
+        if (req.query.keyword) {
+            const keyword = req.query.keyword;
+            // We'll need to use aggregation for this kind of search across relations
+            const applications = await JobApplication.aggregate([
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'userId',
+                        foreignField: '_id',
+                        as: 'userDetails'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'jobs',
+                        localField: 'jobId',
+                        foreignField: '_id',
+                        as: 'jobDetails'
+                    }
+                },
+                {
+                    $match: {
+                        $and: [
+                            filter,
+                            {
+                                $or: [
+                                    { 'basicInfo.fullName': { $regex: keyword, $options: 'i' } },
+                                    { 'jobDetails.title': { $regex: keyword, $options: 'i' } }
+                                ]
+                            }
+                        ]
+                    }
+                },
+                // CẢI TIẾN: Thêm sắp xếp trong pipeline aggregate
+                { $sort: getSortOptions(req.query.sortBy, req.query.sortOrder) },
+                { $skip: skip },
+                { $limit: limit }
+            ]);
+
+            const total = await JobApplication.aggregate([
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'userId',
+                        foreignField: '_id',
+                        as: 'userDetails'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'jobs',
+                        localField: 'jobId',
+                        foreignField: '_id',
+                        as: 'jobDetails'
+                    }
+                },
+                {
+                    $match: {
+                        $and: [
+                            filter,
+                            {
+                                $or: [
+                                    { 'basicInfo.fullName': { $regex: keyword, $options: 'i' } },
+                                    { 'jobDetails.title': { $regex: keyword, $options: 'i' } }
+                                ]
+                            }
+                        ]
+                    }
+                },
+                { $count: 'total' }
+            ]);
+
+            const totalCount = total.length > 0 ? total[0].total : 0;
+
+            // Need to populate after aggregation
+            const populatedApplications = await JobApplication.populate(applications, [
+                {
+                    path: 'userId',
+                    select: 'name email image resume phone education experience skills'
+                },
+                {
+                    path: 'jobId',
+                    select: 'title description location category type experience salary'
+                },
+                {
+                    path: 'companyId',
+                    select: 'name email image'
+                }
+            ]);
+
+            return res.json({
+                success: true,
+                count: totalCount,
+                applications: populatedApplications,
+                pagination: {
+                    total: totalCount,
+                    page,
+                    pages: Math.ceil(totalCount / limit),
+                    limit
+                },
+                filters: {
+                    keyword,
+                    status: req.query.status || 'all',
+                    companyId: req.query.companyId,
+                    jobId: req.query.jobId,
+                    sortBy: req.query.sortBy || 'createdAt',
+                    sortOrder: req.query.sortOrder || 'desc'
+                }
+            });
+        } else {
+            // Without keyword search, we can use the simpler approach
+            // Get total count
+            const totalCount = await JobApplication.countDocuments(filter);
+
+            // CẢI TIẾN: Sử dụng hàm helper để xác định sắp xếp
+            const sortOptions = getSortOptions(req.query.sortBy, req.query.sortOrder);
+
+            // Execute query with pagination
+            const applications = await JobApplication.find(filter)
+                .populate({
+                    path: 'userId',
+                    select: 'name email image resume phone education experience skills'
+                })
+                .populate({
+                    path: 'jobId',
+                    select: 'title description location category type experience salary'
+                })
+                .populate({
+                    path: 'companyId',
+                    select: 'name email image'
+                })
+                .sort(sortOptions)  // Áp dụng sắp xếp được xác định động
+                .skip(skip)
+                .limit(limit)
+                .lean();
+
+            return res.json({
+                success: true,
+                count: totalCount,
+                applications,
+                pagination: {
+                    total: totalCount,
+                    page,
+                    pages: Math.ceil(totalCount / limit),
+                    limit
+                },
+                filters: {
+                    status: req.query.status || 'all',
+                    companyId: req.query.companyId,
+                    jobId: req.query.jobId,
+                    sortBy: req.query.sortBy || 'createdAt',
+                    sortOrder: req.query.sortOrder || 'desc'
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error in getAllApplications:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching applications',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Helper function to get sort options based on sortBy and sortOrder
+ * @param {string} sortBy - Field to sort by
+ * @param {string} sortOrder - Sort order ('asc' or 'desc')
+ * @returns {object} - MongoDB sort options object
+ */
+function getSortOptions(sortBy = 'createdAt', sortOrder = 'desc') {
+    const order = sortOrder === 'asc' ? 1 : -1;
+    const sortOptions = {};
+
+    // Validate and handle special sort cases
+    switch (sortBy) {
+        case 'userName':
+            // Sắp xếp theo tên của user (từ collection users)
+            // Trong truy vấn thông thường, ta cần sử dụng aggregation để sắp xếp theo trường này
+            // Nhưng vì đây là helper function, ta trả về giải pháp thay thế
+            sortOptions['basicInfo.fullName'] = order;
+            break;
+
+        case 'jobTitle':
+            // Sắp xếp theo tiêu đề job (từ collection jobs)
+            // Tương tự, đây là giải pháp thay thế khi không dùng aggregation
+            sortOptions['jobDetails.0.title'] = order;
+            break;
+
+        case 'companyName':
+            // Sắp xếp theo tên công ty
+            sortOptions['companyDetails.0.name'] = order;
+            break;
+
+        case 'status':
+            // Sắp xếp theo trạng thái đơn ứng tuyển
+            sortOptions['status'] = order;
+            break;
+
+        case 'date':
+        case 'appliedDate':
+            // Sắp xếp theo ngày nộp đơn
+            sortOptions['createdAt'] = order;
+            break;
+
+        default:
+            // Mặc định sắp xếp theo trường được chỉ định hoặc createdAt
+            sortOptions[sortBy || 'createdAt'] = order;
+    }
+
+    // Luôn thêm sắp xếp thứ hai theo thời gian tạo để đảm bảo thứ tự ổn định
+    if (sortBy !== 'createdAt' && sortBy !== 'date' && sortBy !== 'appliedDate') {
+        sortOptions['createdAt'] = -1; // Mới nhất trước
+    }
+
+    return sortOptions;
+}
+export const getApplicationDetail = async (req, res) => {
+    try {
+        const { applicationId } = req.params;
+        const companyId = req.company._id;
+
+        // Validate applicationId
+        if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid application ID'
+            });
+        }
+
+        // Find application with detailed populate
+        const application = await JobApplication.findOne({
+            _id: applicationId,
+            companyId: companyId
+        })
+            .populate('userId', 'name email image avatar resume phone education experience skills')
+            .populate('jobId', 'title description location category type experience salary')
+            .populate('companyId', 'name logo image')
+            .lean();
+
+        if (!application) {
+            return res.status(404).json({
+                success: false,
+                message: 'Application not found or you do not have permission to view it'
+            });
+        }
+
+        // Log the application data for debugging
+        console.log('Application found:', {
+            id: application._id,
+            hasBasicInfo: !!application.basicInfo,
+            coverLetter: application.basicInfo?.coverLetter ? 'Present' : 'Not Present'
+        });
+
+        // Auto-update status if it's 'pending'
+        if (application.status === 'pending') {
+            await JobApplication.findByIdAndUpdate(
+                applicationId,
+                {
+                    status: 'viewed',
+                    $push: {
+                        interactionHistory: {
+                            action: 'viewed',
+                            date: new Date(),
+                            notes: 'Application viewed by company',
+                            performedBy: companyId
+                        }
+                    }
+                },
+                { new: true }
+            );
+
+            // Update the application object for response
+            application.status = 'viewed';
+        }
+
+        return res.json({
+            success: true,
+            application
+        });
+    } catch (error) {
+        console.error('Error fetching application detail:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error fetching application detail',
+            error: error.message
+        });
     }
 };
 
@@ -1229,89 +1916,6 @@ export const getApplicantsForJob = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Error fetching applications'
-        });
-    }
-};
-export const getApplicantsForJob_2 = async (req, res) => {
-    try {
-        const { jobId } = req.params;
-        const companyId = req.company._id;
-
-        // First verify that the job belongs to this company
-        const job = await Job.findOne({
-            _id: jobId,
-            companyId: companyId
-        });
-
-        if (!job) {
-            return res.status(404).json({
-                success: false,
-                message: 'Job not found or not authorized'
-            });
-        }
-
-        // Get applications only for this specific job
-        const applications = await JobApplication.find({
-            jobId: jobId,
-            companyId: companyId
-        })
-            .populate('userId', 'name email image resume phone education experience skills')
-            .sort({ createdAt: -1 });
-
-        return res.json({
-            success: true,
-            jobTitle: job.title,
-            applications: applications
-        });
-
-    } catch (error) {
-        console.error('Error in getApplicantsForJob:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error fetching applications',
-            error: error.message
-        });
-    }
-};
-export const getApplicantsForJob_1 = async (req, res) => {
-    const { jobId } = req.params;
-    const companyId = req.company._id;
-
-    try {
-        // Kiểm tra job có tồn tại và thuộc về company không
-        const job = await Job.findOne({
-            _id: jobId,
-            companyId: companyId
-        });
-
-        if (!job) {
-            return res.status(404).json({
-                success: false,
-                message: 'Không tìm thấy công việc hoặc không có quyền truy cập'
-            });
-        }
-
-        // Lấy danh sách ứng viên chỉ của job này
-        const applications = await JobApplication.find({
-            jobId: jobId,
-            companyId: companyId
-        })
-            .populate('userId', 'name email image resume phone education experience skills')
-            .populate('jobId', 'title description location category level salary')
-            .sort({ createdAt: -1 })
-            .lean();
-
-        return res.json({
-            success: true,
-            count: applications.length,
-            jobTitle: job.title,
-            applications: applications
-        });
-    } catch (error) {
-        console.error('Error fetching applicants:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Lỗi khi lấy danh sách ứng viên'
         });
     }
 };
@@ -1426,53 +2030,6 @@ export const updateApplicationStatusByCompany = async (req, res) => {
         });
     }
 };
-export const updateApplicationStatusByCompany_suadethemthongbao = async (req, res) => {
-    try {
-        const { applicationId } = req.params;
-        const { status } = req.body;
-        const companyId = req.company._id;
-
-        // Validate status value
-        const validStatuses = ['pending', 'viewed', 'shortlisted', 'interviewing', 'rejected', 'hired'];
-        if (!validStatuses.includes(status)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid status value'
-            });
-        }
-
-        // Find and update the application
-        const application = await JobApplication.findOneAndUpdate(
-            {
-                _id: applicationId,
-                companyId: companyId // Ensure company owns this application
-            },
-            { status },
-            { new: true }
-        ).populate('userId', 'name email')
-            .populate('jobId', 'title');
-
-        if (!application) {
-            return res.status(404).json({
-                success: false,
-                message: 'Không tìm thấy đơn ứng tuyển hoặc không có quyền cập nhật'
-            });
-        }
-
-        res.json({
-            success: true,
-            message: 'Cập nhật trạng thái thành công',
-            application
-        });
-    } catch (error) {
-        console.error('Error updating application status:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Lỗi khi cập nhật trạng thái',
-            error: error.message
-        });
-    }
-};
 export const updateApplicationStatusByCompany_0 = async (req, res) => {
     const { applicationId } = req.params;
     const { status: newStatus } = req.body; // Lấy status mới từ body request
@@ -1522,53 +2079,6 @@ export const updateApplicationStatusByCompany_0 = async (req, res) => {
     }
 };
 
-export const toggleJobVisibility = async (req, res) => {
-    try {
-        const jobId = req.params.id;
-        const companyId = req.company._id;
-
-        //console.log('Toggle visibility for job:', jobId);
-        // Tìm job và verify ownership
-        const job = await Job.findOne({
-            _id: jobId,
-            companyId,
-            //status: 'approved' // Chỉ cho phép toggle khi job đã được approve
-        });
-
-        if (!job) {
-            return res.status(404).json({
-                success: false,
-                message: 'Job not found or not approved yet'
-            });
-        }
-        //console.log('Current job status:', job.status);
-        // Kiểm tra status approved     
-        if (job.status !== 'active' && job.status !== 'approved') {
-            return res.status(400).json({
-                success: false,
-                message: "Chỉ những công việc đã được duyệt hoặc đang hoạt động mới có thể thay đổi trạng thái hiển thị"
-            });
-        }
-
-        // Toggle visibility
-        job.visible = !job.visible;
-        await job.save();
-
-        //console.log('Updated job visibility:', job.visible);
-
-        res.json({
-            success: true,
-            message: `Job ${job.visible ? 'visible' : 'hidden'} successfully`,
-            job
-        });
-    } catch (error) {
-        console.error('Error toggling job visibility:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error updating job visibility'
-        });
-    }
-};
 export const toggleJobVisibility_1 = async (req, res) => {
     try {
         const jobId = req.params.id;
@@ -1602,48 +2112,80 @@ export const toggleJobVisibility_1 = async (req, res) => {
         });
     }
 };
-export const toggleJobVisibility_0 = async (req, res) => {
-    const { jobId } = req.params;
-    const companyId = req.company._id;
 
-    if (!mongoose.Types.ObjectId.isValid(jobId)) {
-        return res.status(400).json({ success: false, message: 'Job ID không hợp lệ' });
-    }
 
+// Thêm 3 controller mới
+export const getCompanyProfile = async (req, res) => {
     try {
-        // 1. Tìm job
-        const job = await Job.findById(jobId);
-        if (!job) {
-            return res.status(404).json({ success: false, message: 'Không tìm thấy công việc' });
+        const companyId = req.company._id;
+
+        // Tìm thông tin công ty đầy đủ
+        const company = await Company.findById(companyId).select('-password');
+
+        if (!company) {
+            return res.status(404).json({
+                success: false,
+                message: 'Company profile not found'
+            });
         }
 
-        // 2. Kiểm tra quyền sở hữu
-        if (job.companyId.toString() !== companyId.toString()) {
-            return res.status(403).json({ success: false, message: 'Bạn không có quyền thay đổi công việc này' });
-        }
+        // Thêm log để debug
+        console.log('Finding active jobs for company:', companyId);
 
-        // 3. Đảo ngược trạng thái isVisible
-        job.visible = !job.visible; // Lật trạng thái true/false
+        // Lấy số lượng công việc đang hoạt động - CHỈ LẤY TRẠNG THÁI ACTIVE
+        const activeJobsCount = await Job.countDocuments({
+            companyId,
+            status: 'active', // Chỉ đếm jobs có status là 'active'
+            visible: true
+        });
 
-        // 4. Lưu lại
-        await job.save();
+        // Log kết quả để debug
+        console.log('Active jobs count:', activeJobsCount);
+
+        // Lấy tổng số đơn ứng tuyển
+        const applicationsCount = await JobApplication.countDocuments({
+            companyId
+        });
+
+        // Lấy số lượng ứng viên đã tuyển
+        const hiredCandidatesCount = await JobApplication.countDocuments({
+            companyId,
+            status: 'hired'
+        });
 
         res.json({
             success: true,
-            message: `Đã ${job.visible ? 'bật hiển thị' : 'tắt hiển thị'} công việc "${job.title}"`,
-            job: { _id: job._id, visible: job.visible } // Trả về trạng thái mới
+            profile: {
+                _id: company._id,
+                name: company.name,
+                email: company.email,
+                phone: company.phone || "",
+                website: company.website || "",
+                location: company.location || "",
+                foundedYear: company.foundedYear || "",
+                industry: company.industry || "",
+                employees: company.employees || "",
+                description: company.description || "",
+                benefits: company.benefits || [],
+                image: company.image || "",
+                status: company.status,
+                subscription: company.subscription || "free"
+            },
+            stats: {
+                activeJobs: activeJobsCount,
+                totalApplications: applicationsCount,
+                hiredCandidates: hiredCandidatesCount
+            }
         });
-
     } catch (error) {
-        console.error(`Error toggling visibility for job ${jobId}:`, error);
-        res.status(500).json({ success: false, message: 'Lỗi server khi thay đổi trạng thái hiển thị' });
+        console.error('Error fetching company profile:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching company profile',
+            error: error.message
+        });
     }
 };
-
-
-// Thêm vào file d:\Job_portal_website\server\controllers\companyController.js
-
-// Thêm 3 controller mới
 export const updateCompanyProfile = async (req, res) => {
     try {
         const companyId = req.company._id;
@@ -1770,25 +2312,38 @@ export const uploadCompanyImage = async (req, res) => {
 // Cập nhật hàm getCompanyStats để trả về thông tin phân tích
 
 // Cập nhật hàm getCompanyStats hoặc thêm nếu chưa có
-
 export const getCompanyStats = async (req, res) => {
     try {
         const companyId = req.company._id;
 
-        // Tìm tất cả công việc của công ty
-        const jobs = await Job.find({
+        // Thêm log để debug
+        console.log('Finding stats for company:', companyId);
+
+        // Đếm các job đang hoạt động với cùng điều kiện như trong getCompanyProfile
+        const activeJobsCount = await Job.countDocuments({
             companyId,
-            status: 'approved',
+            status: 'active', // Chỉ đếm jobs có status là 'active'
             visible: true
         });
 
-        // Đếm số công việc đang hoạt động
-        const activeJobs = jobs.length;
+        // Log số lượng active jobs để debug
+        console.log('Active jobs count in getCompanyStats:', activeJobsCount);
+
+        // Kiểm tra chi tiết job để xác định vấn đề
+        const allJobs = await Job.find({ companyId })
+            .select('title status visible')
+            .lean();
+
+        console.log('Debug - All jobs with status:',
+            allJobs.map(j => ({
+                title: j.title,
+                status: j.status,
+                visible: j.visible
+            }))
+        );
 
         // Tìm tất cả đơn ứng tuyển cho công ty này
-        const applications = await JobApplication.find({ companyId })
-            .populate('jobId')
-            .populate('userId');
+        const applications = await JobApplication.find({ companyId });
 
         // Đếm tổng số đơn ứng tuyển
         const totalApplications = applications.length;
@@ -1805,29 +2360,36 @@ export const getCompanyStats = async (req, res) => {
             return new Date(appDate) >= sevenDaysAgo;
         }).length;
 
+        // Lấy job đã được chấp thuận & hiển thị để tính các thống kê khác
+        const visibleJobs = await Job.find({
+            companyId,
+            status: 'active',
+            visible: true
+        });
+
         // Tổng lượt xem của tất cả công việc
-        const viewCount = jobs.reduce((total, job) => total + (job.viewCount || 0), 0);
+        const viewCount = visibleJobs.reduce((total, job) => total + (job.viewCount || 0), 0);
 
         // Tỷ lệ chuyển đổi (số đơn ứng tuyển / lượt xem)
         const conversionRate = viewCount ? Math.round((totalApplications / viewCount) * 100) : 0;
 
         // Tìm job có hiệu suất tốt nhất
         let topPerformingJob = null;
-        if (jobs.length > 0) {
+        if (visibleJobs.length > 0) {
             // Sort jobs by applications count
-            const jobsWithStats = jobs.map(job => {
-                const jobApplications = applications.filter(app =>
-                    app.jobId && app.jobId._id.toString() === job._id.toString()
-                ).length;
-                const conversion = job.viewCount ? (jobApplications / job.viewCount) * 100 : 0;
+            const jobsWithStats = await Promise.all(visibleJobs.map(async (job) => {
+                const jobApplicationsCount = await JobApplication.countDocuments({
+                    jobId: job._id
+                });
+                const conversion = job.viewCount ? (jobApplicationsCount / job.viewCount) * 100 : 0;
                 return {
                     _id: job._id,
                     title: job.title,
-                    applications: jobApplications,
+                    applications: jobApplicationsCount,
                     views: job.viewCount || 0,
                     conversion
                 };
-            });
+            }));
 
             // Get top job by conversion rate or applications if tie
             jobsWithStats.sort((a, b) => {
@@ -1842,23 +2404,17 @@ export const getCompanyStats = async (req, res) => {
             }
         }
 
-        // Application timeline (dummy data if not available)
+        // Chuẩn bị dữ liệu thống kê khác như trước đây
         const applicationTimeline = generateTimelineData(applications, 4);
-
-        // Views timeline (dummy data if not available)
-        const viewsTimeline = generateViewsTimeline(jobs, 4);
-
-        // Applications by job (dummy data if not available)
-        const conversionByJob = generateConversionByJob(jobs, applications);
-
-        // Top skills from applicants (dummy data if not available)
+        const viewsTimeline = generateViewsTimeline(visibleJobs, 4);
+        const conversionByJob = generateConversionByJob(visibleJobs, applications);
         const topSkills = generateTopSkills(applications);
 
         // Trả về kết quả
         res.json({
             success: true,
             stats: {
-                activeJobs,
+                activeJobs: activeJobsCount, // Đảm bảo dùng cùng cách đếm như getCompanyProfile
                 totalApplications,
                 hiredCandidates,
                 newApplications,
@@ -2006,230 +2562,6 @@ function generateTopSkills(applications) {
 
     return topSkills;
 }
-export const getCompanyStats_2 = async (req, res) => {
-    try {
-        const companyId = req.company._id;
-
-        // Tìm tất cả công việc của công ty
-        const jobs = await Job.find({
-            companyId,
-            status: 'approved',
-            visible: true
-        });
-
-        // Đếm số công việc đang hoạt động
-        const activeJobs = jobs.length;
-
-        // Tìm tất cả đơn ứng tuyển cho công ty này
-        const applications = await JobApplication.find({ companyId })
-            .populate('jobId')
-            .populate('userId');
-
-        // Đếm tổng số đơn ứng tuyển
-        const totalApplications = applications.length;
-
-        // Đếm số ứng viên đã được tuyển
-        const hiredCandidates = applications.filter(app => app.status === 'hired').length;
-
-        // Đếm số đơn ứng tuyển mới (trong vòng 7 ngày)
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-        const newApplications = applications.filter(app => {
-            const appDate = app.date || app.createdAt;
-            return new Date(appDate) >= sevenDaysAgo;
-        }).length;
-
-        // Tổng lượt xem của tất cả công việc
-        const viewCount = jobs.reduce((total, job) => total + (job.viewCount || 0), 0);
-
-        // Tỷ lệ chuyển đổi (số đơn ứng tuyển / lượt xem)
-        const conversionRate = viewCount ? Math.round((totalApplications / viewCount) * 100) : 0;
-
-        // Tìm job có hiệu suất tốt nhất
-        let topPerformingJob = null;
-        if (jobs.length > 0) {
-            // Sort jobs by applications count
-            const jobsWithStats = jobs.map(job => {
-                const jobApplications = applications.filter(app =>
-                    app.jobId && app.jobId._id.toString() === job._id.toString()
-                ).length;
-                const conversion = job.viewCount ? (jobApplications / job.viewCount) * 100 : 0;
-                return {
-                    _id: job._id,
-                    title: job.title,
-                    applications: jobApplications,
-                    views: job.viewCount || 0,
-                    conversion
-                };
-            });
-
-            // Get top job by conversion rate or applications if tie
-            jobsWithStats.sort((a, b) => {
-                if (b.conversion === a.conversion) {
-                    return b.applications - a.applications;
-                }
-                return b.conversion - a.conversion;
-            });
-
-            topPerformingJob = jobsWithStats[0];
-        }
-
-        // Ứng dụng theo tuần (4 tuần gần nhất)
-        const applicationTimeline = [];
-        const today = new Date();
-
-        for (let i = 3; i >= 0; i--) {
-            const weekStart = new Date(today);
-            weekStart.setDate(today.getDate() - (i * 7 + 7));
-
-            const weekEnd = new Date(today);
-            weekEnd.setDate(today.getDate() - (i * 7));
-
-            const weekApps = applications.filter(app => {
-                const appDate = app.date || app.createdAt;
-                return new Date(appDate) >= weekStart && new Date(appDate) < weekEnd;
-            }).length;
-
-            applicationTimeline.push({
-                name: `Week ${4 - i}`,
-                applications: weekApps
-            });
-        }
-
-        // Lượt xem theo tuần
-        const viewsTimeline = [];
-        // Giả định chúng ta có dữ liệu lượt xem theo ngày (hoặc tính toán từ viewCount tổng)
-        // Đây chỉ là dữ liệu mẫu
-        for (let i = 0; i < 4; i++) {
-            viewsTimeline.push({
-                name: `Week ${i + 1}`,
-                views: Math.floor(Math.random() * 50) + 20 // Random data for demonstration
-            });
-        }
-
-        // Đơn ứng tuyển theo công việc
-        const conversionByJob = [];
-        const jobApplicationCounts = {};
-
-        applications.forEach(app => {
-            if (app.jobId) {
-                const jobId = app.jobId._id.toString();
-                const jobTitle = app.jobId.title;
-
-                if (!jobApplicationCounts[jobId]) {
-                    jobApplicationCounts[jobId] = {
-                        name: jobTitle,
-                        value: 0
-                    };
-                }
-
-                jobApplicationCounts[jobId].value++;
-            }
-        });
-
-        // Convert to array and get top 5
-        conversionByJob.push(...Object.values(jobApplicationCounts)
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 5));
-
-        // Kỹ năng hàng đầu từ đơn ứng tuyển
-        const skillsCount = {};
-
-        applications.forEach(app => {
-            if (app.userId && app.userId.skills) {
-                app.userId.skills.forEach(skill => {
-                    if (!skillsCount[skill]) {
-                        skillsCount[skill] = 0;
-                    }
-
-                    skillsCount[skill]++;
-                });
-            }
-        });
-
-        const topSkills = Object.entries(skillsCount)
-            .map(([name, count]) => ({ name, count }))
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 5);
-
-        // Trả về kết quả
-        res.json({
-            success: true,
-            stats: {
-                activeJobs,
-                totalApplications,
-                hiredCandidates,
-                newApplications,
-                viewCount,
-                conversionRate,
-                topPerformingJob,
-                applicationTimeline,
-                viewsTimeline,
-                conversionByJob,
-                topSkills
-            }
-        });
-    } catch (error) {
-        console.error('Error in getCompanyStats:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error retrieving company stats',
-            error: error.message
-        });
-    }
-};
-export const getCompanyStats_1 = async (req, res) => {
-    try {
-        const companyId = req.company._id;
-
-        // Tìm tất cả công việc của công ty
-        const jobs = await Job.find({
-            companyId,
-            status: 'approved', // Chỉ đếm các job đã được duyệt
-            visible: true // Chỉ đếm các job đang hiện
-        });
-
-        // Đếm số công việc đang hoạt động
-        const activeJobs = jobs.length;
-
-        // Tìm tất cả đơn ứng tuyển cho công ty này
-        const applications = await JobApplication.find({ companyId });
-
-        // Đếm tổng số đơn ứng tuyển
-        const totalApplications = applications.length;
-
-        // Đếm số ứng viên đã được tuyển
-        const hiredCandidates = applications.filter(app => app.status === 'hired').length;
-
-        // Đếm số đơn ứng tuyển mới (trong vòng 7 ngày)
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-        const newApplications = applications.filter(app => {
-            const appDate = app.date || app.createdAt;
-            return new Date(appDate) >= sevenDaysAgo;
-        }).length;
-
-        // Trả về kết quả
-        res.json({
-            success: true,
-            stats: {
-                activeJobs,
-                totalApplications,
-                hiredCandidates,
-                newApplications
-            }
-        });
-    } catch (error) {
-        console.error('Error in getCompanyStats:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error retrieving company stats',
-            error: error.message
-        });
-    }
-};
 export const getCompanyStats_0 = async (req, res) => {
     try {
         const companyId = req.company._id;
@@ -2277,3 +2609,4 @@ export const getCompanyStats_0 = async (req, res) => {
         });
     }
 };
+

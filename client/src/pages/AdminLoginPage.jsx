@@ -63,9 +63,10 @@ const AdminLoginPage = () => {
                 }
 
                 toast.success(data.message || "Đăng nhập thành công!");
-
+                //toast.success('Đăng nhập thành công');
                 // Khởi động lại trang để đảm bảo token được sử dụng đúng cách
-                window.location.href = '/admin/dashboard';
+                //window.location.href = '/admin/dashboard';
+                navigate('/admin/dashboard');
             } else {
                 toast.error(data.message || "Đăng nhập thất bại.");
             }
@@ -90,12 +91,12 @@ const AdminLoginPage = () => {
                 <h2 className="text-2xl font-bold text-center text-gray-700 mb-6">Đăng nhập quản trị viên</h2>
 
                 {/* Thêm phần debugging hiển thị thông tin trạng thái */}
-                {process.env.NODE_ENV === 'development' && (
-                    <div className="mb-4 p-2 bg-gray-100 rounded text-xs">
-                        <p>BackendUrl: {backendUrl ? 'Đã cấu hình' : 'Chưa cấu hình'}</p>
-                        <p>AdminToken trong localStorage: {localStorage.getItem('adminToken') ? 'Đã có token' : 'Chưa có token'}</p>
-                    </div>
-                )}
+                {/* {process.env.NODE_ENV === 'development' && ( */}
+                {/* // <div className="mb-4 p-2 bg-gray-100 rounded text-xs"> */}
+                {/* <p>BackendUrl: {backendUrl ? 'Đã cấu hình' : 'Chưa cấu hình'}</p> */}
+                {/* <p>AdminToken trong localStorage: {localStorage.getItem('adminToken') ? 'Đã có token' : 'Chưa có token'}</p> */}
+                {/* </div> */}
+                {/* // )} */}
 
                 <form onSubmit={handleSubmit}>
                     {/* Email Input */}

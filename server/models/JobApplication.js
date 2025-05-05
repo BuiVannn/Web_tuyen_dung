@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const jobApplicationSchema = new mongoose.Schema({
+const jobApplicationSchema = mongoose.Schema({
     companyId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Company',
@@ -18,16 +18,107 @@ const jobApplicationSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'viewed', 'shortlisted', 'interviewing', 'hired', 'rejected'],
+        enum: ['pending', 'viewed', 'reviewing', 'shortlisted', 'rejected', 'interviewing', 'interview_scheduled', 'offered', 'hired', 'withdrawn'],
         default: 'pending'
     },
     date: {
         type: Date,
         default: Date.now
-    }
+    },
+    // Thông tin cơ bản của ứng viên
+    basicInfo: {
+        fullName: {
+            type: String,
+            required: true
+        },
+        email: {
+            type: String,
+            required: true
+        },
+        phoneNumber: {
+            type: String,
+            required: true
+        },
+        birthYear: {
+            type: Number
+        },
+        education: {
+            type: String
+        },
+        coverLetter: {
+            type: String
+        },
+        resumeUrl: {
+            type: String
+        },
+        submittedFrom: {
+            type: String // Device/browser info
+        },
+        ipAddress: {
+            type: String
+        }
+    },
+    // Lưu lịch sử tương tác với ứng viên
+    interactionHistory: [{
+        action: {
+            type: String,
+            enum: ['status_change', 'viewed', 'contacted', 'interview_scheduled', 'feedback_added']
+        },
+        date: {
+            type: Date,
+            default: Date.now
+        },
+        notes: String,
+        performedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        }
+    }]
+}, {
+    timestamps: true
 });
 
 export default mongoose.model('JobApplication', jobApplicationSchema);
+
+// import mongoose from 'mongoose';
+
+// const jobApplicationSchema = new mongoose.Schema({
+//     companyId: {
+//         type: mongoose.Schema.Types.ObjectId,
+//         ref: 'Company',
+//         required: true
+//     },
+//     userId: {
+//         type: mongoose.Schema.Types.ObjectId,
+//         ref: 'User',
+//         required: true
+//     },
+//     jobId: {
+//         type: mongoose.Schema.Types.ObjectId,
+//         ref: 'Job',
+//         required: true
+//     },
+//     status: {
+//         type: String,
+//         enum: ['pending', 'viewed', 'shortlisted', 'interviewing', 'hired', 'rejected'],
+//         default: 'pending'
+//     },
+//     date: {
+//         type: Date,
+//         default: Date.now
+//     }
+// });
+
+//export default mongoose.model('JobApplication', jobApplicationSchema);
+
+
+
+
+
+
+
+
+
 
 // import mongoose from 'mongoose';
 

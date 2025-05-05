@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'; // Dùng cho nút xem chi tiết (nếu
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { AppContext } from '../../context/AppContext';
+import { useOutletContext } from 'react-router-dom';
 // Không cần import AdminHeader, AdminSidebar nếu dùng AdminLayout
 // import AdminHeader from '../../components/admin/AdminHeader';
 // import AdminSidebar from '../../components/admin/AdminSidebar';
@@ -21,6 +22,7 @@ const JobsManagement = () => {
     const { backendUrl } = useContext(AppContext);
     const itemsPerPage = 10;
 
+    const { setHeaderTitle } = useOutletContext() || {};
     // Các trạng thái công việc có thể có (dựa trên backend)
     //const jobStatuses = ['active', 'inactive', 'pending', 'approved', 'rejected']; // Cập nhật nếu cần
     const jobStatuses = ['active', 'inactive', 'pending', 'rejected'];
@@ -48,6 +50,11 @@ const JobsManagement = () => {
         }
     };
 
+    useEffect(() => {
+        if (setHeaderTitle) {
+            setHeaderTitle("Quản lý công việc");
+        }
+    }, [setHeaderTitle]);
     // useEffect để fetch dữ liệu khi component mount
     useEffect(() => {
         if (backendUrl) { fetchJobs(); }

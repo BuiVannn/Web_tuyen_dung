@@ -1,11 +1,12 @@
 import express from 'express';
-import { loginUser, registerUser } from '../controllers/userController.js';
-import {
-    loginCompany,
-    registerCompany
-} from '../controllers/companyController.js';
+import { loginUser, registerUser, logoutUser } from '../controllers/userController.js';
+// import {
+// loginCompany,
+// registerCompany
+// } from '../controllers/companyController.js';
 import { loginAdmin, logoutAdmin } from '../controllers/adminController.js';
-import { adminMiddleware, protectUser } from '../middlewares/authMiddleware.js';
+import { adminMiddleware, protectUser, protectCompany } from '../middlewares/authMiddleware.js';
+import { loginCompany, registerCompany, logoutCompany } from '../controllers/companyController.js';
 import {
     getUserApplications,
     applyForJob,
@@ -185,7 +186,8 @@ const router = express.Router();
  *       500:
  *         description: Lỗi server
  */
-router.post('/users/register', upload.single('image'), registerUser);
+//router.post('/users/register', upload.single('image'), registerUser);
+router.post('/users/register', registerUser);
 
 /**
  * @swagger
@@ -233,6 +235,8 @@ router.post('/users/register', upload.single('image'), registerUser);
  *         description: Lỗi server
  */
 router.post('/users/login', loginUser);
+
+router.post('/users/logout', protectUser, logoutUser);
 
 /**
  * @swagger
@@ -287,7 +291,7 @@ router.post('/users/login', loginUser);
  *       500:
  *         description: Lỗi server
  */
-router.get('/users/profile', protectUser, getUserProfile);
+//router.get('/users/profile', protectUser, getUserProfile);
 
 /**
  * @swagger
@@ -317,7 +321,7 @@ router.get('/users/profile', protectUser, getUserProfile);
  *       500:
  *         description: Lỗi server
  */
-router.get('/users/applications', protectUser, getUserApplications);
+//router.get('/users/applications', protectUser, getUserApplications);
 
 /**
  * @swagger
@@ -371,7 +375,7 @@ router.get('/users/applications', protectUser, getUserApplications);
  *       500:
  *         description: Lỗi server
  */
-router.post('/users/apply', protectUser, applyForJob);
+//router.post('/users/apply', protectUser, applyForJob);
 
 // Company auth routes
 /**
@@ -500,6 +504,7 @@ router.post('/companies/register', upload.single('image'), registerCompany);
  */
 router.post('/companies/login', loginCompany);
 
+router.post('/companies/logout', protectCompany, logoutCompany);
 // Admin auth route
 /**
  * @swagger

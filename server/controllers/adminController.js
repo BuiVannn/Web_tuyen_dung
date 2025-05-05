@@ -359,6 +359,75 @@ export const getAdminStats = async (req, res) => {
 // --- User Management ---
 export const getAllUsers = async (req, res) => {
     try {
+        // Parse query parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const keyword = req.query.keyword || '';
+        const status = req.query.status; // 'active', 'inactive', or undefined for all
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+
+        // Build filter
+        const filter = {};
+
+        // Add keyword search
+        if (keyword) {
+            filter.$or = [
+                { name: { $regex: keyword, $options: 'i' } },
+                { email: { $regex: keyword, $options: 'i' } }
+            ];
+        }
+
+        // Add status filter
+        if (status) {
+            filter.active = status === 'active';
+        }
+
+        // Calculate pagination
+        const startIndex = (page - 1) * limit;
+
+        // Get total count
+        const total = await User.countDocuments(filter);
+
+        // Build sort object
+        const sortOptions = {};
+        sortOptions[sortBy] = sortOrder;
+
+        // Execute query
+        const users = await User.find(filter)
+            .select('-password')
+            .sort(sortOptions)
+            .skip(startIndex)
+            .limit(limit)
+            .lean();
+
+        return res.json({
+            success: true,
+            users,
+            pagination: {
+                total,
+                page,
+                pages: Math.ceil(total / limit),
+                limit
+            },
+            filters: {
+                keyword,
+                status,
+                sortBy,
+                sortOrder: sortOrder === 1 ? 'asc' : 'desc'
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching all users:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Lỗi server khi lấy danh sách người dùng",
+            error: error.message
+        });
+    }
+};
+export const getAllUsers_0 = async (req, res) => {
+    try {
         // Implement pagination
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
@@ -494,6 +563,85 @@ export const deleteUserById = async (req, res) => {
 // 9
 // --- Company Management ---
 export const getAllCompanies = async (req, res) => {
+    try {
+        // Parse query parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const keyword = req.query.keyword || '';
+        const status = req.query.status; // 'active', 'inactive', 'verified', 'unverified'
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+
+        // Build filter
+        const filter = {};
+
+        // Add keyword search
+        if (keyword) {
+            filter.$or = [
+                { name: { $regex: keyword, $options: 'i' } },
+                { email: { $regex: keyword, $options: 'i' } },
+                { industry: { $regex: keyword, $options: 'i' } },
+                { location: { $regex: keyword, $options: 'i' } }
+            ];
+        }
+
+        // Add status filter
+        if (status) {
+            if (status === 'active') {
+                filter.active = true;
+            } else if (status === 'inactive') {
+                filter.active = false;
+            } else if (status === 'verified') {
+                filter.verified = true;
+            } else if (status === 'unverified') {
+                filter.verified = false;
+            }
+        }
+
+        // Calculate pagination
+        const startIndex = (page - 1) * limit;
+
+        // Get total count based on filter
+        const total = await Company.countDocuments(filter);
+
+        // Build sort object
+        const sortOptions = {};
+        sortOptions[sortBy] = sortOrder;
+
+        // Execute query
+        const companies = await Company.find(filter)
+            .select('-password')
+            .sort(sortOptions)
+            .skip(startIndex)
+            .limit(limit)
+            .lean();
+
+        return res.json({
+            success: true,
+            companies,
+            pagination: {
+                total,
+                page,
+                pages: Math.ceil(total / limit),
+                limit
+            },
+            filters: {
+                keyword,
+                status,
+                sortBy,
+                sortOrder: sortOrder === 1 ? 'asc' : 'desc'
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching all companies:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Lỗi server khi lấy danh sách công ty",
+            error: error.message
+        });
+    }
+};
+export const getAllCompanies_khongcotimkiem = async (req, res) => {
     try {
         // Implement pagination
         const page = parseInt(req.query.page) || 1;
@@ -652,6 +800,114 @@ export const deleteCompanyById = async (req, res) => {
 // 12
 // --- Job Management ---
 export const getAllJobs = async (req, res) => {
+    try {
+        // Parse query parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const status = req.query.status; // 'all', 'active', 'pending', etc.
+        const keyword = req.query.keyword || '';
+        const companyId = req.query.companyId;
+        const category = req.query.category;
+        const type = req.query.type;
+        const experience = req.query.experience;
+        const location = req.query.location;
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+
+        // Build the query
+        const query = {};
+
+        // Status filter
+        if (status && status !== 'all') {
+            query.status = status;
+        }
+
+        // Company filter
+        if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
+            query.companyId = companyId;
+        }
+
+        // Category filter
+        if (category) {
+            query.category = { $regex: category, $options: 'i' };
+        }
+
+        // Type filter
+        if (type) {
+            query.type = type;
+        }
+
+        // Experience filter
+        if (experience) {
+            query.experience = experience;
+        }
+
+        // Location filter
+        if (location) {
+            query.location = { $regex: location, $options: 'i' };
+        }
+
+        // Keyword search
+        if (keyword) {
+            query.$or = [
+                { title: { $regex: keyword, $options: 'i' } },
+                { description: { $regex: keyword, $options: 'i' } },
+            ];
+        }
+
+        // Get total count for pagination
+        const total = await Job.countDocuments(query);
+
+        // Calculate pagination
+        const startIndex = (page - 1) * limit;
+
+        // Build sort object
+        const sortOptions = {};
+
+        // Validate sortBy against allowed fields
+        const allowedSortFields = ['createdAt', 'title', 'status', 'minSalary', 'maxSalary', 'updatedAt'];
+        const validSortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+        sortOptions[validSortField] = sortOrder;
+
+        // Fetch jobs with pagination and populate company info
+        const jobs = await Job.find(query)
+            .populate('companyId', 'name image location')
+            .sort(sortOptions)
+            .skip(startIndex)
+            .limit(limit)
+            .lean();
+
+        return res.json({
+            success: true,
+            jobs,
+            pagination: {
+                total,
+                page,
+                pages: Math.ceil(total / limit),
+                limit
+            },
+            filters: {
+                status: status || 'all',
+                keyword,
+                companyId,
+                category,
+                type,
+                experience,
+                location,
+                sortBy: validSortField,
+                sortOrder: sortOrder === 1 ? 'asc' : 'desc'
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching all jobs:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Lỗi server khi lấy danh sách việc làm",
+            error: error.message
+        });
+    }
+};
+export const getAllJobs_khongcótimkiemsapxep = async (req, res) => {
     try {
         // Parse query parameters
         const page = parseInt(req.query.page) || 1;
@@ -976,6 +1232,156 @@ export const approveJob = async (req, res) => {
 // 17
 // --- Application Management ---
 export const getAllApplications = async (req, res) => {
+    try {
+        // Parse query parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const status = req.query.status; // 'all', 'pending', 'reviewing', 'shortlisted', 'rejected', 'interviewing', 'accepted'
+        const keyword = req.query.keyword || '';
+        const companyId = req.query.companyId;
+        const jobId = req.query.jobId;
+        const userId = req.query.userId;
+        const dateFrom = req.query.dateFrom;
+        const dateTo = req.query.dateTo;
+        const sortBy = req.query.sortBy || 'createdAt';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+
+        // Build the query
+        const query = {};
+
+        // Filter by status
+        if (status && status !== 'all') {
+            query.status = status;
+        }
+
+        // Filter by company
+        if (companyId && mongoose.Types.ObjectId.isValid(companyId)) {
+            query.companyId = companyId;
+        }
+
+        // Filter by job
+        if (jobId && mongoose.Types.ObjectId.isValid(jobId)) {
+            query.jobId = jobId;
+        }
+
+        // Filter by user
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            query.userId = userId;
+        }
+
+        // Filter by date range
+        if (dateFrom || dateTo) {
+            query.createdAt = {};
+
+            if (dateFrom) {
+                query.createdAt.$gte = new Date(dateFrom);
+            }
+
+            if (dateTo) {
+                const endDate = new Date(dateTo);
+                endDate.setHours(23, 59, 59, 999);
+                query.createdAt.$lte = endDate;
+            }
+        }
+
+        // Keyword search (search across multiple fields)
+        if (keyword) {
+            // We need to populate first to search in related documents
+            const userMatches = await User.find({
+                $or: [
+                    { name: { $regex: keyword, $options: 'i' } },
+                    { email: { $regex: keyword, $options: 'i' } }
+                ]
+            }).select('_id');
+
+            const jobMatches = await Job.find({
+                title: { $regex: keyword, $options: 'i' }
+            }).select('_id');
+
+            const companyMatches = await Company.find({
+                name: { $regex: keyword, $options: 'i' }
+            }).select('_id');
+
+            const userIds = userMatches.map(user => user._id);
+            const jobIds = jobMatches.map(job => job._id);
+            const companyIds = companyMatches.map(company => company._id);
+
+            // If we have any matches, add them to the query
+            if (userIds.length > 0 || jobIds.length > 0 || companyIds.length > 0) {
+                query.$or = [];
+
+                if (userIds.length > 0) {
+                    query.$or.push({ userId: { $in: userIds } });
+                }
+
+                if (jobIds.length > 0) {
+                    query.$or.push({ jobId: { $in: jobIds } });
+                }
+
+                if (companyIds.length > 0) {
+                    query.$or.push({ companyId: { $in: companyIds } });
+                }
+            } else if (keyword) {
+                // If keyword was provided but no matches found, return no results
+                query._id = { $exists: false };
+            }
+        }
+
+        // Get total count for pagination
+        const total = await JobApplication.countDocuments(query);
+
+        // Calculate pagination
+        const startIndex = (page - 1) * limit;
+
+        // Build sort object
+        const sortOptions = {};
+
+        // Validate sortBy against allowed fields
+        const allowedSortFields = ['createdAt', 'status', 'updatedAt'];
+        const validSortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+        sortOptions[validSortField] = sortOrder;
+
+        // Fetch applications with pagination and populate necessary info
+        const applications = await JobApplication.find(query)
+            .populate('userId', 'name email image')
+            .populate('jobId', 'title location category type')
+            .populate('companyId', 'name image')
+            .sort(sortOptions)
+            .skip(startIndex)
+            .limit(limit)
+            .lean();
+
+        return res.json({
+            success: true,
+            applications,
+            pagination: {
+                total,
+                page,
+                pages: Math.ceil(total / limit),
+                limit
+            },
+            filters: {
+                status: status || 'all',
+                keyword,
+                companyId,
+                jobId,
+                userId,
+                dateFrom,
+                dateTo,
+                sortBy: validSortField,
+                sortOrder: sortOrder === 1 ? 'asc' : 'desc'
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching all applications:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Lỗi server khi lấy danh sách ứng tuyển",
+            error: error.message
+        });
+    }
+};
+export const getAllApplications_khongcotimkiemsx = async (req, res) => {
     try {
         // Parse query parameters
         const page = parseInt(req.query.page) || 1;

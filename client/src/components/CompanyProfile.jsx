@@ -15,25 +15,54 @@ const CompanyProfile = () => {
         hiredCandidates: 0,
     });
 
-    useEffect(() => {
-        if (companyToken && companyData) {
-            fetchCompanyStats();
-        }
-    }, [companyToken, companyData]);
+    // useEffect(() => {
+    // if (companyToken && companyData) {
+    // fetchCompanyStats();
+    // }
+    // }, [companyToken, companyData]);
+    // 
+    // const fetchCompanyStats = async () => {
+    // try {
+    // const { data } = await axios.get(`${backendUrl}/api/companies/stats`, {
+    // headers: {
+    // 'Authorization': `Bearer ${companyToken}`
+    // }
+    // });
+    // 
+    // if (data.success) {
+    // setStats(data.stats);
+    // }
+    // } catch (error) {
+    // console.error('Error fetching company stats:', error);
+    // }
+    // };
 
-    const fetchCompanyStats = async () => {
+    useEffect(() => {
+        if (companyToken) {
+            fetchCompanyProfile();
+        }
+    }, [companyToken]);
+
+    const fetchCompanyProfile = async () => {
         try {
-            const { data } = await axios.get(`${backendUrl}/api/companies/stats`, {
+            setLoading(true);
+            const { data } = await axios.get(`${backendUrl}/api/companies/profile`, {
                 headers: {
                     'Authorization': `Bearer ${companyToken}`
                 }
             });
 
             if (data.success) {
+                // Sửa đoạn này để phù hợp với cấu trúc response từ getCompanyProfile
+                setCompanyData(data.profile);
+                // Cập nhật thống kê
                 setStats(data.stats);
             }
         } catch (error) {
-            console.error('Error fetching company stats:', error);
+            console.error('Error fetching company profile:', error);
+            toast.error('Failed to load company profile');
+        } finally {
+            setLoading(false);
         }
     };
 

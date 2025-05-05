@@ -15,7 +15,7 @@ import {
     Clock
 } from 'lucide-react';
 import Pagination from '../../components/Pagination';
-
+import { useOutletContext } from 'react-router-dom';
 // Helper function render status badge
 const renderStatusBadge = (status) => {
     let colorClasses = 'bg-gray-100 text-gray-800';
@@ -59,8 +59,13 @@ const BlogManagement = () => {
 
     // --- CONTEXT ---
     const { backendUrl } = useContext(AppContext);
-
+    const { setHeaderTitle } = useOutletContext() || {};
     // --- EFFECTS ---
+    useEffect(() => {
+        if (setHeaderTitle) {
+            setHeaderTitle("Quản lý blog");
+        }
+    }, [setHeaderTitle]);
     useEffect(() => {
         fetchBlogs();
     }, [currentPage, filterStatus, refreshTrigger, backendUrl]);

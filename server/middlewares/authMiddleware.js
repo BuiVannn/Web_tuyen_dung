@@ -186,6 +186,61 @@ export const protectUser_0 = async (req, res, next) => {
 };
 export const protectCompany = async (req, res, next) => {
     try {
+        console.log('Company middleware running...');
+        const token = req.headers.authorization?.split(' ')[1];
+        console.log('Token received:', token ? `${token.substring(0, 15)}...` : 'No token');
+
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: 'Vui lòng đăng nhập để tiếp tục'
+            });
+        }
+
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            console.log('Decoded token:', decoded);
+
+            // Kiểm tra cả companyId và id (để tương thích với cả hai format)
+            const companyId = decoded.companyId || decoded.id;
+
+            if (!companyId) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Token không hợp lệ'
+                });
+            }
+
+            console.log('Looking for company with ID:', companyId);
+            const company = await Company.findById(companyId).select('-password');
+            console.log('Company found:', company ? 'Yes' : 'No');
+
+            if (!company) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Company not found'
+                });
+            }
+
+            req.company = company;
+            next();
+        } catch (error) {
+            console.error('JWT verification error:', error.message);
+            return res.status(401).json({
+                success: false,
+                message: 'Token không hợp lệ hoặc đã hết hạn'
+            });
+        }
+    } catch (error) {
+        console.error('Company auth middleware error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Lỗi server khi xác thực công ty'
+        });
+    }
+};
+export const protectCompany_3 = async (req, res, next) => {
+    try {
         const token = req.headers.authorization?.split(' ')[1];
         const decoded = verifyToken(token, process.env.JWT_SECRET);
 

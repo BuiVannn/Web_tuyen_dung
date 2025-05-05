@@ -267,12 +267,42 @@ export const AppContextProvider = (props) => {
         }
     };
 
-    const logoutUser = () => {
+    const logoutUser_0 = () => {
         console.log('Logging out user...');
         setUserToken(null);
         setUserData(null);
         setUserApplications([]);
         localStorage.removeItem('userToken');
+    };
+    const logoutUser = async () => {
+        try {
+            if (userToken) {
+                // Gọi API logout
+                await axios.post(`${backendUrl}/api/auth/users/logout`, {}, {
+                    headers: {
+                        Authorization: `Bearer ${userToken}`
+                    }
+                });
+            }
+
+            // Xóa dữ liệu client-side
+            setUserToken(null);
+            setUserData(null);
+            setUserApplications([]);
+            localStorage.removeItem('userToken');
+
+            // Có thể chuyển hướng người dùng về trang chủ
+            // window.location.href = '/';
+            toast.success('Logged out successfully');
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Dù API có lỗi vẫn thực hiện xóa dữ liệu client
+            setUserToken(null);
+            setUserData(null);
+            setUserApplications([]);
+            localStorage.removeItem('userToken');
+            toast.error('Error during logout, but your session was cleared');
+        }
     };
 
     const loginCompany = async (token, company) => {
@@ -298,11 +328,41 @@ export const AppContextProvider = (props) => {
         }
     };
 
-    const logoutCompany = () => {
+    const logoutCompany_0 = () => {
         setCompanyToken(null);
         setCompanyData(null);
         localStorage.removeItem('companyToken');
         setShowRecruiterLogin(false);
+    };
+    const logoutCompany = async () => {
+        try {
+            if (companyToken) {
+                // Gọi API logout
+                await axios.post(`${backendUrl}/api/auth/companies/logout`, {}, {
+                    headers: {
+                        Authorization: `Bearer ${companyToken}`
+                    }
+                });
+            }
+
+            // Xóa dữ liệu client-side
+            setCompanyToken(null);
+            setCompanyData(null);
+            localStorage.removeItem('companyToken');
+            setShowRecruiterLogin(false);
+
+            // Có thể chuyển hướng người dùng về trang chủ
+            // window.location.href = '/';
+            toast.success('Logged out successfully');
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Dù API có lỗi vẫn thực hiện xóa dữ liệu client
+            setCompanyToken(null);
+            setCompanyData(null);
+            localStorage.removeItem('companyToken');
+            setShowRecruiterLogin(false);
+            toast.error('Error during logout, but your session was cleared');
+        }
     };
 
     const fetchAdminData = async () => {
@@ -363,11 +423,42 @@ export const AppContextProvider = (props) => {
     };
 
     // Thêm hàm logoutAdmin
-    const logoutAdmin = () => {
+    const logoutAdmin_0 = () => {
         setAdminToken(null);
         setAdminData(null);
         localStorage.removeItem('adminToken');
         localStorage.removeItem('adminName');
+    };
+
+    const logoutAdmin = async () => {
+        try {
+            if (adminToken) {
+                // Gọi API logout
+                await axios.post(`${backendUrl}/api/auth/admin/logout`, {}, {
+                    headers: {
+                        Authorization: `Bearer ${adminToken}`
+                    }
+                });
+            }
+
+            // Xóa dữ liệu client-side
+            setAdminToken(null);
+            setAdminData(null);
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminName');
+
+            // Có thể chuyển hướng người dùng về trang đăng nhập admin
+            // window.location.href = '/admin/login';
+            toast.success('Logged out successfully');
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Dù API có lỗi vẫn thực hiện xóa dữ liệu client
+            setAdminToken(null);
+            setAdminData(null);
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminName');
+            toast.error('Error during logout, but your session was cleared');
+        }
     };
 
     // Thêm phần kiểm tra adminToken trong useEffect ban đầu

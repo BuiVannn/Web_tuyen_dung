@@ -1,4 +1,3 @@
-// Chỉ cập nhật phần header để nổi bật hơn
 import React, { useContext, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
@@ -12,12 +11,14 @@ import moment from 'moment';
 import axios from "axios";
 import { toast } from "react-toastify";
 import { MdLocationOn, MdWork, MdAttachMoney, MdBusinessCenter, MdCategory, MdDateRange } from "react-icons/md";
+import JobApplicationForm from "../components/JobApplicationForm";
 
 const ApplyJob = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [JobData, setJobData] = useState(null);
     const [isAlreadyApplied, setIsAlreadyApplied] = useState(false);
+    const [showApplicationForm, setShowApplicationForm] = useState(false);
     const { backendUrl, userToken, userData, userApplications, fetchUserApplications, jobs } = useContext(AppContext);
 
     // Function to determine header background gradient based on job category
@@ -62,33 +63,22 @@ const ApplyJob = () => {
             if (!userData) {
                 return toast.error('Vui lòng đăng nhập để ứng tuyển');
             }
-            if (!userData.resume) {
-                navigate('/applications');
-                return toast.error('Vui lòng tải lên resume trước khi ứng tuyển');
-            }
 
-            const { data } = await axios.post(
-                `${backendUrl}/api/users/apply`,
-                { jobId: JobData._id },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${userToken}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
+            // Mở form ứng tuyển thay vì gọi API trực tiếp
+            setShowApplicationForm(true);
 
-            if (data.success) {
-                toast.success('Ứng tuyển thành công');
-                await fetchUserApplications();
-                checkAlreadyApplied();
-            } else {
-                toast.error(data.message || 'Ứng tuyển thất bại');
-            }
         } catch (error) {
             console.error('Apply error:', error);
             toast.error(error.response?.data?.message || 'Lỗi khi ứng tuyển');
         }
+    };
+
+    const handleApplicationSuccess = async () => {
+        // Đóng form và hiển thị thông báo thành công
+        setShowApplicationForm(false);
+        toast.success('Ứng tuyển thành công');
+        await fetchUserApplications();
+        checkAlreadyApplied();
     };
 
     const checkAlreadyApplied = () => {
@@ -122,14 +112,14 @@ const ApplyJob = () => {
                             {/* Job type badge */}
                             <div className="absolute top-4 right-4">
                                 <span className={`px-4 py-1.5 text-sm font-medium rounded-full shadow-md ${JobData.type?.toLowerCase().includes("full-time")
-                                        ? "bg-blue-50 text-blue-600 border border-blue-200"
-                                        : JobData.type?.toLowerCase().includes("part-time")
-                                            ? "bg-purple-50 text-purple-600 border border-purple-200"
-                                            : JobData.type?.toLowerCase().includes("contract")
-                                                ? "bg-orange-50 text-orange-600 border border-orange-200"
-                                                : JobData.type?.toLowerCase().includes("internship")
-                                                    ? "bg-green-50 text-green-600 border border-green-200"
-                                                    : "bg-gray-50 text-gray-600 border border-gray-200"
+                                    ? "bg-blue-50 text-blue-600 border border-blue-200"
+                                    : JobData.type?.toLowerCase().includes("part-time")
+                                        ? "bg-purple-50 text-purple-600 border border-purple-200"
+                                        : JobData.type?.toLowerCase().includes("contract")
+                                            ? "bg-orange-50 text-orange-600 border border-orange-200"
+                                            : JobData.type?.toLowerCase().includes("internship")
+                                                ? "bg-green-50 text-green-600 border border-green-200"
+                                                : "bg-gray-50 text-gray-600 border border-gray-200"
                                     }`}>
                                     {JobData.type || "Full-time"}
                                 </span>
@@ -165,8 +155,8 @@ const ApplyJob = () => {
                                         onClick={applyHandler}
                                         disabled={isAlreadyApplied}
                                         className={`px-6 py-3 rounded-lg font-medium text-white ${isAlreadyApplied
-                                                ? 'bg-gray-400 cursor-not-allowed'
-                                                : 'bg-blue-600 hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg'
+                                            ? 'bg-gray-400 cursor-not-allowed'
+                                            : 'bg-blue-600 hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg'
                                             }`}
                                     >
                                         {isAlreadyApplied ? 'Đã ứng tuyển' : 'Ứng tuyển ngay'}
@@ -245,8 +235,8 @@ const ApplyJob = () => {
                                     onClick={applyHandler}
                                     disabled={isAlreadyApplied}
                                     className={`mt-8 px-6 py-3 rounded-lg font-medium text-white ${isAlreadyApplied
-                                            ? 'bg-gray-400 cursor-not-allowed'
-                                            : 'bg-blue-600 hover:bg-blue-700 transition-colors shadow-md'
+                                        ? 'bg-gray-400 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700 transition-colors shadow-md'
                                         }`}
                                 >
                                     {isAlreadyApplied ? 'Đã ứng tuyển' : 'Ứng tuyển ngay'}
@@ -286,6 +276,48 @@ const ApplyJob = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Application Form Modal */}
+            {showApplicationForm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="p-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-2xl font-bold text-gray-800">Đơn Ứng Tuyển</h2>
+                                <button
+                                    onClick={() => setShowApplicationForm(false)}
+                                    className="text-gray-500 hover:text-gray-700"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div className="mb-4">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <img
+                                        src={JobData.companyId.image}
+                                        alt={JobData.companyId.name}
+                                        className="h-10 w-10 object-contain bg-white p-1 border rounded"
+                                    />
+                                    <div>
+                                        <p className="font-medium text-gray-800">{JobData.title}</p>
+                                        <p className="text-sm text-gray-600">{JobData.companyId.name}</p>
+                                    </div>
+                                </div>
+                                <hr className="my-3" />
+                            </div>
+                            {/* Nhúng form ứng tuyển */}
+                            <JobApplicationForm
+                                jobId={JobData._id}
+                                onSuccess={handleApplicationSuccess}
+                                onCancel={() => setShowApplicationForm(false)}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <Footer />
         </>
     ) : (
@@ -294,6 +326,307 @@ const ApplyJob = () => {
 };
 
 export default ApplyJob;
+// // Chỉ cập nhật phần header để nổi bật hơn
+// import React, { useContext, useEffect, useState } from "react";
+// import { useNavigate, useParams } from "react-router-dom";
+// import { AppContext } from "../context/AppContext";
+// import { assets } from "../assets/assets";
+// import Navbar from "../components/Navbar";
+// import Loading from "../components/Loading";
+// import JobCard from "../components/JobCard";
+// import Footer from "../components/Footer";
+// import kconvert from 'k-convert';
+// import moment from 'moment';
+// import axios from "axios";
+// import { toast } from "react-toastify";
+// import { MdLocationOn, MdWork, MdAttachMoney, MdBusinessCenter, MdCategory, MdDateRange } from "react-icons/md";
+
+// const ApplyJob = () => {
+//     const { id } = useParams();
+//     const navigate = useNavigate();
+//     const [JobData, setJobData] = useState(null);
+//     const [isAlreadyApplied, setIsAlreadyApplied] = useState(false);
+//     const { backendUrl, userToken, userData, userApplications, fetchUserApplications, jobs } = useContext(AppContext);
+
+//     // Function to determine header background gradient based on job category
+//     const getHeaderGradient = () => {
+//         if (!JobData?.category) return "from-blue-100 to-indigo-50";
+
+//         const category = JobData.category.toLowerCase();
+//         if (category.includes("technology") || category.includes("it"))
+//             return "from-blue-100 to-indigo-50";
+//         if (category.includes("marketing") || category.includes("sales"))
+//             return "from-orange-100 to-amber-50";
+//         if (category.includes("design") || category.includes("creative"))
+//             return "from-purple-100 to-fuchsia-50";
+//         if (category.includes("finance") || category.includes("accounting"))
+//             return "from-green-100 to-emerald-50";
+//         if (category.includes("health") || category.includes("medical"))
+//             return "from-red-100 to-rose-50";
+//         return "from-gray-100 to-slate-50";
+//     };
+
+//     const fetchJob = async () => {
+//         try {
+//             const { data } = await axios.get(`${backendUrl}/api/jobs/${id}`, {
+//                 headers: {
+//                     'Content-Type': 'application/json'
+//                 }
+//             });
+
+//             if (data.success) {
+//                 setJobData(data.job);
+//             } else {
+//                 toast.error(data.message);
+//             }
+//         } catch (error) {
+//             console.error("Error fetching job:", error);
+//             toast.error(error.response?.data?.message || 'Error fetching job details');
+//         }
+//     };
+
+//     const applyHandler = async () => {
+//         try {
+//             if (!userData) {
+//                 return toast.error('Vui lòng đăng nhập để ứng tuyển');
+//             }
+//             if (!userData.resume) {
+//                 navigate('/applications');
+//                 return toast.error('Vui lòng tải lên resume trước khi ứng tuyển');
+//             }
+
+//             const { data } = await axios.post(
+//                 `${backendUrl}/api/users/apply`,
+//                 { jobId: JobData._id },
+//                 {
+//                     headers: {
+//                         'Authorization': `Bearer ${userToken}`,
+//                         'Content-Type': 'application/json'
+//                     }
+//                 }
+//             );
+
+//             if (data.success) {
+//                 toast.success('Ứng tuyển thành công');
+//                 await fetchUserApplications();
+//                 checkAlreadyApplied();
+//             } else {
+//                 toast.error(data.message || 'Ứng tuyển thất bại');
+//             }
+//         } catch (error) {
+//             console.error('Apply error:', error);
+//             toast.error(error.response?.data?.message || 'Lỗi khi ứng tuyển');
+//         }
+//     };
+
+//     const checkAlreadyApplied = () => {
+//         if (!JobData || !userApplications?.length) return;
+
+//         const hasApplied = userApplications.some(application =>
+//             application.jobId && application.jobId._id === JobData._id
+//         );
+
+//         setIsAlreadyApplied(hasApplied);
+//     };
+
+//     useEffect(() => {
+//         fetchJob();
+//     }, [id, backendUrl]);
+
+//     useEffect(() => {
+//         if (JobData && userApplications?.length) {
+//             checkAlreadyApplied();
+//         }
+//     }, [JobData, userApplications]);
+
+//     return JobData ? (
+//         <>
+//             <Navbar />
+//             <div className="min-h-screen bg-gray-50 py-10">
+//                 <div className="container px-4 mx-auto max-w-6xl">
+//                     {/* Nâng cấp phần Header */}
+//                     <div className="bg-white shadow-lg rounded-xl mb-8 overflow-hidden">
+//                         <div className={`bg-gradient-to-r ${getHeaderGradient()} px-8 py-8 border-b relative`}>
+//                             {/* Job type badge */}
+//                             <div className="absolute top-4 right-4">
+//                                 <span className={`px-4 py-1.5 text-sm font-medium rounded-full shadow-md ${JobData.type?.toLowerCase().includes("full-time")
+//                                         ? "bg-blue-50 text-blue-600 border border-blue-200"
+//                                         : JobData.type?.toLowerCase().includes("part-time")
+//                                             ? "bg-purple-50 text-purple-600 border border-purple-200"
+//                                             : JobData.type?.toLowerCase().includes("contract")
+//                                                 ? "bg-orange-50 text-orange-600 border border-orange-200"
+//                                                 : JobData.type?.toLowerCase().includes("internship")
+//                                                     ? "bg-green-50 text-green-600 border border-green-200"
+//                                                     : "bg-gray-50 text-gray-600 border border-gray-200"
+//                                     }`}>
+//                                     {JobData.type || "Full-time"}
+//                                 </span>
+//                             </div>
+
+//                             <div className="flex flex-wrap items-center justify-between">
+//                                 <div className="flex items-center space-x-5 mb-4 md:mb-0">
+//                                     <div className="bg-white p-4 rounded-lg shadow-md border flex items-center justify-center">
+//                                         <img
+//                                             src={JobData.companyId.image}
+//                                             alt={JobData.companyId.name}
+//                                             className="h-16 w-16 object-contain"
+//                                             onError={(e) => {
+//                                                 e.target.onerror = null;
+//                                                 e.target.src = 'https://placehold.co/80x80/e9ecef/495057?text=Logo';
+//                                             }}
+//                                         />
+//                                     </div>
+//                                     <div>
+//                                         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2 drop-shadow-sm">{JobData.title}</h1>
+//                                         <div className="flex items-center">
+//                                             <span className="text-blue-700 font-semibold text-lg">{JobData.companyId.name}</span>
+//                                             <span className="mx-2 text-gray-400">•</span>
+//                                             <span className="text-gray-600 text-sm">
+//                                                 Đăng {moment(JobData.createdAt).fromNow()}
+//                                             </span>
+//                                         </div>
+//                                     </div>
+//                                 </div>
+
+//                                 <div className="flex flex-col">
+//                                     <button
+//                                         onClick={applyHandler}
+//                                         disabled={isAlreadyApplied}
+//                                         className={`px-6 py-3 rounded-lg font-medium text-white ${isAlreadyApplied
+//                                                 ? 'bg-gray-400 cursor-not-allowed'
+//                                                 : 'bg-blue-600 hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg'
+//                                             }`}
+//                                     >
+//                                         {isAlreadyApplied ? 'Đã ứng tuyển' : 'Ứng tuyển ngay'}
+//                                     </button>
+//                                 </div>
+//                             </div>
+//                         </div>
+
+//                         {/* Job details */}
+//                         <div className="px-8 py-6">
+//                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+//                                 <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+//                                     <div className="flex items-center mb-1">
+//                                         <MdLocationOn className="text-blue-500 mr-2" size={20} />
+//                                         <h3 className="font-medium text-gray-700">Địa điểm</h3>
+//                                     </div>
+//                                     <p className="text-gray-600">{JobData.location}</p>
+//                                 </div>
+
+//                                 <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+//                                     <div className="flex items-center mb-1">
+//                                         <MdBusinessCenter className="text-green-500 mr-2" size={20} />
+//                                         <h3 className="font-medium text-gray-700">Loại công việc</h3>
+//                                     </div>
+//                                     <p className="text-gray-600">{JobData.type || "Toàn thời gian"}</p>
+//                                 </div>
+
+//                                 <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+//                                     <div className="flex items-center mb-1">
+//                                         <MdWork className="text-red-500 mr-2" size={20} />
+//                                         <h3 className="font-medium text-gray-700">Kinh nghiệm</h3>
+//                                     </div>
+//                                     <p className="text-gray-600">
+//                                         {JobData.experience ||
+//                                             (JobData.level && JobData.level.toLowerCase().includes("beginner") ? "Entry Level" : "Không yêu cầu")}
+//                                     </p>
+//                                 </div>
+
+//                                 <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+//                                     <div className="flex items-center mb-1">
+//                                         <MdAttachMoney className="text-amber-500 mr-2" size={20} />
+//                                         <h3 className="font-medium text-gray-700">Mức lương</h3>
+//                                     </div>
+//                                     <p className="text-gray-600">{JobData.salary ? JobData.salary : kconvert.convertTo(JobData.salary)}</p>
+//                                 </div>
+
+//                                 <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+//                                     <div className="flex items-center mb-1">
+//                                         <MdCategory className="text-purple-500 mr-2" size={20} />
+//                                         <h3 className="font-medium text-gray-700">Danh mục</h3>
+//                                     </div>
+//                                     <p className="text-gray-600">{JobData.category}</p>
+//                                 </div>
+
+//                                 <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+//                                     <div className="flex items-center mb-1">
+//                                         <MdDateRange className="text-indigo-500 mr-2" size={20} />
+//                                         <h3 className="font-medium text-gray-700">Ngày đăng</h3>
+//                                     </div>
+//                                     <p className="text-gray-600">{moment(JobData.createdAt).format('DD/MM/YYYY')}</p>
+//                                 </div>
+//                             </div>
+//                         </div>
+//                     </div>
+
+//                     <div className="flex flex-col lg:flex-row gap-8">
+//                         {/* Job description */}
+//                         <div className="w-full lg:w-2/3">
+//                             <div className="bg-white shadow-sm rounded-xl p-8">
+//                                 <h2 className="text-2xl font-semibold mb-6 text-gray-800">Mô tả công việc</h2>
+//                                 <div className="prose max-w-none">
+//                                     <div className="rich-text text-gray-700" dangerouslySetInnerHTML={{ __html: JobData.description }}></div>
+//                                 </div>
+
+//                                 <button
+//                                     onClick={applyHandler}
+//                                     disabled={isAlreadyApplied}
+//                                     className={`mt-8 px-6 py-3 rounded-lg font-medium text-white ${isAlreadyApplied
+//                                             ? 'bg-gray-400 cursor-not-allowed'
+//                                             : 'bg-blue-600 hover:bg-blue-700 transition-colors shadow-md'
+//                                         }`}
+//                                 >
+//                                     {isAlreadyApplied ? 'Đã ứng tuyển' : 'Ứng tuyển ngay'}
+//                                 </button>
+//                             </div>
+//                         </div>
+
+//                         {/* Related jobs */}
+//                         <div className="w-full lg:w-1/3">
+//                             <div className="bg-white shadow-sm rounded-xl p-6 sticky top-24">
+//                                 <h2 className="text-xl font-semibold mb-4 text-gray-800">
+//                                     Công việc khác từ {JobData.companyId.name}
+//                                 </h2>
+//                                 <div className="space-y-4">
+//                                     {jobs?.filter(job => job._id !== JobData._id && job.companyId._id === JobData.companyId._id)
+//                                         .filter(job => {
+//                                             const appliedJobsIds = new Set(userApplications?.map(app => app.jobId && app.jobId._id))
+//                                             return !appliedJobsIds.has(job._id)
+//                                         }).slice(0, 3)
+//                                         .map((job, index) => (
+//                                             <div key={job._id || index} className="border rounded-lg hover:shadow-sm transition-shadow">
+//                                                 <JobCard
+//                                                     job={job}
+//                                                     customClass="h-full border-none shadow-none"
+//                                                 />
+//                                             </div>
+//                                         ))}
+
+//                                     {jobs?.filter(job => job._id !== JobData._id && job.companyId._id === JobData.companyId._id).length === 0 && (
+//                                         <p className="text-gray-500 italic text-center py-4">
+//                                             Không có công việc khác từ công ty này
+//                                         </p>
+//                                     )}
+//                                 </div>
+//                             </div>
+//                         </div>
+//                     </div>
+//                 </div>
+//             </div>
+//             <Footer />
+//         </>
+//     ) : (
+//         <Loading />
+//     );
+// };
+
+// export default ApplyJob;
+
+
+
+
+
 // import React, { useContext, useEffect, useState } from "react";
 // import { useNavigate, useParams } from "react-router-dom";
 // import { AppContext } from "../context/AppContext";

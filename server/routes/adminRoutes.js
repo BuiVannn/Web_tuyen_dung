@@ -156,7 +156,7 @@ router.use(adminMiddleware);
  *         description: Lỗi server
  */
 router.get('/profile', getAdminProfile);
-
+// ok
 /**
  * @swagger
  * /api/admin/profile:
@@ -203,7 +203,7 @@ router.get('/profile', getAdminProfile);
  *         description: Lỗi server
  */
 router.put('/profile', updateAdminProfile);
-
+// ok
 /**
  * @swagger
  * /api/admin/change-password:
@@ -250,7 +250,7 @@ router.put('/profile', updateAdminProfile);
  *         description: Lỗi server
  */
 router.put('/change-password', updateAdminPassword);
-
+// ok
 // Dashboard Stats
 /**
  * @swagger
@@ -279,7 +279,7 @@ router.put('/change-password', updateAdminPassword);
  *         description: Lỗi server
  */
 router.get('/stats', getAdminStats);
-
+// ok
 // User Management
 /**
  * @swagger
@@ -334,7 +334,7 @@ router.get('/stats', getAdminStats);
  *         description: Lỗi server
  */
 router.get('/users', getAllUsers);
-
+// ok
 /**
  * @swagger
  * /api/admin/users/{userId}:
@@ -371,7 +371,7 @@ router.get('/users', getAllUsers);
  *         description: Lỗi server
  */
 router.get('/users/:userId', getUserDetails);
-
+// ok
 /**
  * @swagger
  * /api/admin/users/{userId}:
@@ -409,7 +409,7 @@ router.get('/users/:userId', getUserDetails);
  *         description: Lỗi server
  */
 router.delete('/users/:userId', deleteUserById);
-
+// ok
 // Company Management
 /**
  * @swagger
@@ -464,7 +464,7 @@ router.delete('/users/:userId', deleteUserById);
  *         description: Lỗi server
  */
 router.get('/companies', getAllCompanies);
-
+// ok
 /**
  * @swagger
  * /api/admin/companies/{companyId}:
@@ -501,7 +501,7 @@ router.get('/companies', getAllCompanies);
  *         description: Lỗi server
  */
 router.get('/companies/:companyId', getCompanyDetails);
-
+// ok
 /**
  * @swagger
  * /api/admin/companies/{companyId}:
@@ -539,7 +539,7 @@ router.get('/companies/:companyId', getCompanyDetails);
  *         description: Lỗi server
  */
 router.delete('/companies/:companyId', deleteCompanyById);
-
+// ok
 // Job Management
 /**
  * @swagger
@@ -600,7 +600,7 @@ router.delete('/companies/:companyId', deleteCompanyById);
  *         description: Lỗi server
  */
 router.get('/jobs', getAllJobs);
-
+// ok
 /**
  * @swagger
  * /api/admin/jobs/{jobId}:
@@ -637,7 +637,7 @@ router.get('/jobs', getAllJobs);
  *         description: Lỗi server
  */
 router.get('/jobs/:jobId', getJobDetails);
-
+// ok
 /**
  * @swagger
  * /api/admin/jobs/{jobId}:
@@ -675,7 +675,7 @@ router.get('/jobs/:jobId', getJobDetails);
  *         description: Lỗi server
  */
 router.delete('/jobs/:jobId', deleteJobById);
-
+// ok
 /**
  * @swagger
  * /api/admin/jobs/{jobId}/status:
@@ -730,7 +730,7 @@ router.delete('/jobs/:jobId', deleteJobById);
  *         description: Lỗi server
  */
 router.patch('/jobs/:jobId/status', updateJobStatus);
-
+// ok
 /**
  * @swagger
  * /api/admin/jobs/{id}/approve:
@@ -770,7 +770,7 @@ router.patch('/jobs/:jobId/status', updateJobStatus);
  *         description: Lỗi server
  */
 router.patch('/jobs/:id/approve', approveJob);
-
+// ok
 // Application Management
 /**
  * @swagger
@@ -826,7 +826,7 @@ router.patch('/jobs/:id/approve', approveJob);
  *         description: Lỗi server
  */
 router.get('/applications', getAllApplications);
-
+// ok
 // Image Upload for content
 /**
  * @swagger

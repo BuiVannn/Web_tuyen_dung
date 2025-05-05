@@ -1,6 +1,15 @@
 import express from 'express';
-import { getJobById, getJobs, approveJob } from '../controllers/jobController.js';
-import { authMiddleware, adminMiddleware } from '../middlewares/authMiddleware.js';
+import {
+    getJobById,
+    getJobs,
+    approveJob,
+    updateJob,
+    deleteJob,
+    postJob,
+    getJobDetails,
+    toggleJobVisibility
+} from '../controllers/jobController.js';
+import { authMiddleware, adminMiddleware, protectCompany } from '../middlewares/authMiddleware.js';
 
 /**
  * @swagger
@@ -167,7 +176,7 @@ const router = express.Router();
  *         description: Lỗi server
  */
 router.get('/', getJobs);
-
+// ok
 /**
  * @swagger
  * /api/jobs/{id}:
@@ -205,7 +214,7 @@ router.get('/', getJobs);
  *         description: Lỗi server
  */
 router.get('/:id', getJobById);
-
+// ok
 /**
  * @swagger
  * /api/jobs/{id}/approve:
@@ -248,7 +257,18 @@ router.get('/:id', getJobById);
  *         description: Lỗi server
  */
 router.patch('/:id/approve', authMiddleware, adminMiddleware, approveJob);
-
+//ok
+router.post('/', protectCompany, postJob);
+//ok
+router.get('/company/:jobId', protectCompany, getJobDetails);
+router.put('/:id', protectCompany, updateJob);
+// ok
+router.delete('/:id', protectCompany, deleteJob);
+//ok
+router.patch('/:jobId/visibility', protectCompany, toggleJobVisibility);
+//ok
+// Trong jobRoutes.js - thêm một route thay thế để test
+//router.patch('/:id/visibility', protectCompany, toggleJobVisibility);
 // Add error handling middleware
 router.use((err, req, res, next) => {
     console.error(err.stack);

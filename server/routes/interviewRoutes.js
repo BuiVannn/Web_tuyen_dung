@@ -121,7 +121,7 @@ const router = express.Router();
  *         description: Lỗi server
  */
 router.get('/company', protectCompany, getCompanyInterviews);
-
+// ok
 /**
  * @swagger
  * /api/interviews/schedule:
@@ -205,7 +205,7 @@ router.get('/company', protectCompany, getCompanyInterviews);
  *         description: Lỗi server
  */
 router.post('/schedule', protectCompany, scheduleInterview);
-
+// ok
 /**
  * @swagger
  * /api/interviews/{interviewId}:
@@ -273,7 +273,7 @@ router.post('/schedule', protectCompany, scheduleInterview);
  *         description: Lỗi server
  */
 router.put('/:interviewId', protectCompany, updateInterview);
-
+// ok
 /**
  * @swagger
  * /api/interviews/{interviewId}/cancel:
@@ -438,7 +438,7 @@ router.put('/:interviewId/complete', protectCompany, markInterviewCompleted);
  *         description: Lỗi server
  */
 router.put('/:interviewId/reschedule', protectCompany, rescheduleInterview);
-
+// ok
 /**
  * @swagger
  * /api/interviews/company/{interviewId}:
@@ -477,7 +477,7 @@ router.put('/:interviewId/reschedule', protectCompany, rescheduleInterview);
  *         description: Lỗi server
  */
 router.get('/company/:interviewId', protectCompany, getInterviewDetail);
-
+// ok
 /**
  * @swagger
  * /api/interviews/company/{interviewId}/feedback:
@@ -531,7 +531,7 @@ router.get('/company/:interviewId', protectCompany, getInterviewDetail);
  *         description: Lỗi server
  */
 router.post('/company/:interviewId/feedback', protectCompany, addInterviewFeedback);
-
+// ok
 // User routes
 /**
  * @swagger

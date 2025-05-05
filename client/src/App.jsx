@@ -55,6 +55,8 @@ import DashboardOverview from './components/Dashboard/DashboardOverview';
 import DashboardSettings from './components/Dashboard/DashboardSettings';
 import BlogLayout from './components/BlogLayout';
 import BlogPreview from './pages/admin/BlogPreview';
+import JobApplicationForm from './components/JobApplicationForm';
+import EditJob from './pages/EditJob';
 const App = () => {
   const { showRecruiterLogin, companyToken, showUserLogin } = useContext(AppContext);
 
@@ -80,6 +82,7 @@ const App = () => {
         <Route element={<ProtectedRoute />}>
           <Route path='/apply-job/:id' element={<ApplyJob />} />
           <Route path="/jobs/:id" element={<ApplyJob />} />
+          <Route path="/jobs/:id/apply" element={<JobApplicationForm />} />
           <Route path="/saved-jobs" element={<SavedJobs />} />
           <Route path='/applications' element={<Applications />} />
           <Route path="/profile" element={<ProfilePage />} />
@@ -108,6 +111,7 @@ const App = () => {
           <Route path="edit-profile" element={<EditCompanyProfile />} />
           <Route path="add-job" element={<AddJob />} />
           <Route path="manage-jobs" element={<ManageJobs />} />
+          <Route path="edit-job/:jobId" element={<EditJob />} />
           <Route path="view-applications" element={<ViewApplications />} />
           <Route path="manage-jobs/:jobId/applicants" element={<ViewApplications />} />
           <Route path="interviews" element={<InterviewManagement />} />

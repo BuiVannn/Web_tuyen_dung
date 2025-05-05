@@ -217,7 +217,7 @@ router.use(protectUser);
  *         description: Lỗi server
  */
 router.get('/data', getUserData);
-
+// ok
 /**
  * @swagger
  * /api/users/profile:
@@ -248,7 +248,7 @@ router.get('/data', getUserData);
  *         description: Lỗi server
  */
 router.get('/profile', getUserProfile);
-
+// ok
 /**
  * @swagger
  * /api/users/profile:
@@ -343,7 +343,7 @@ router.get('/profile', getUserProfile);
  *         description: Lỗi server
  */
 router.put('/profile', updateUserProfile);
-
+// ok
 /**
  * @swagger
  * /api/users/update-resume:
@@ -390,7 +390,9 @@ router.put('/profile', updateUserProfile);
  *       500:
  *         description: Lỗi server
  */
+//router.post('/update-resume', upload.single('resume'), updateResume);
 router.post('/update-resume', upload.single('resume'), updateResume);
+// ok
 
 /**
  * @swagger
@@ -439,7 +441,7 @@ router.post('/update-resume', upload.single('resume'), updateResume);
  *         description: Lỗi server
  */
 router.post('/update-avatar', upload.single('avatar'), updateAvatar);
-
+// ok
 /**
  * @swagger
  * /api/users/recommended-jobs:
@@ -485,7 +487,7 @@ router.post('/update-avatar', upload.single('avatar'), updateAvatar);
  *         description: Lỗi server
  */
 router.get('/recommended-jobs', getRecommendedJobs);
-
+// ok
 /**
  * @swagger
  * /api/users/applications:
@@ -523,7 +525,7 @@ router.get('/recommended-jobs', getRecommendedJobs);
  *         description: Lỗi server
  */
 router.get('/applications', getUserApplications);
-
+// ok
 /**
  * @swagger
  * /api/users/apply:
@@ -578,7 +580,7 @@ router.get('/applications', getUserApplications);
  *         description: Lỗi server
  */
 router.post('/apply', applyForJob);
-
+// ok
 /**
  * @swagger
  * /api/users/upcoming-interviews:
@@ -678,7 +680,7 @@ router.get('/upcoming-interviews', async (req, res) => {
  *         description: Lỗi server
  */
 router.get('/dashboard', getUserDashboardData);
-
+// ok
 export default router;
 
 

@@ -11,6 +11,160 @@ export const getCompanyInterviews = async (req, res) => {
     try {
         const companyId = req.company._id;
 
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Filter parameters
+        const filter = { companyId };
+
+        // Filter by date range
+        if (req.query.startDate) {
+            filter.scheduledDate = { ...filter.scheduledDate, $gte: new Date(req.query.startDate) };
+        }
+        if (req.query.endDate) {
+            const endDate = new Date(req.query.endDate);
+            endDate.setHours(23, 59, 59, 999); // Set to end of day
+            filter.scheduledDate = { ...filter.scheduledDate, $lte: endDate };
+        }
+
+        // Filter by status
+        if (req.query.status && req.query.status !== 'all') {
+            filter.status = req.query.status;
+        }
+
+        // Filter by job
+        if (req.query.jobId) {
+            filter.jobId = new mongoose.Types.ObjectId(req.query.jobId);
+        }
+
+        // Search by candidate name (need to handle in aggregation)
+        let interviews;
+        let total;
+
+        if (req.query.keyword) {
+            // Using aggregation to search through populated fields
+            const aggregationPipeline = [
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'userId',
+                        foreignField: '_id',
+                        as: 'userDetails'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'jobs',
+                        localField: 'jobId',
+                        foreignField: '_id',
+                        as: 'jobDetails'
+                    }
+                },
+                {
+                    $match: {
+                        companyId: new mongoose.Types.ObjectId(companyId),
+                        $or: [
+                            { 'userDetails.name': { $regex: req.query.keyword, $options: 'i' } },
+                            { 'jobDetails.title': { $regex: req.query.keyword, $options: 'i' } }
+                        ]
+                    }
+                }
+            ];
+
+            // Apply other filters to the aggregation pipeline
+            if (filter.scheduledDate) {
+                aggregationPipeline[2].$match.scheduledDate = filter.scheduledDate;
+            }
+            if (filter.status) {
+                aggregationPipeline[2].$match.status = filter.status;
+            }
+            if (filter.jobId) {
+                aggregationPipeline[2].$match.jobId = filter.jobId;
+            }
+
+            // Count total for pagination
+            const countPipeline = [...aggregationPipeline, { $count: 'total' }];
+            const countResult = await Interview.aggregate(countPipeline);
+            total = countResult.length > 0 ? countResult[0].total : 0;
+
+            // Get paginated results
+            const resultPipeline = [
+                ...aggregationPipeline,
+                { $sort: { scheduledDate: 1, startTime: 1 } },
+                { $skip: skip },
+                { $limit: limit }
+            ];
+
+            interviews = await Interview.aggregate(resultPipeline);
+
+            // Populate references after aggregation
+            interviews = await Interview.populate(interviews, [
+                { path: 'userId', select: 'name email image' },
+                { path: 'jobId', select: 'title' },
+                { path: 'applicationId', select: 'status' }
+            ]);
+        } else {
+            // Standard query without keyword search
+            // Get total count
+            total = await Interview.countDocuments(filter);
+
+            // Build sort options
+            const sortField = req.query.sortBy || 'scheduledDate';
+            const sortOrder = req.query.sortOrder === 'desc' ? -1 : 1;
+
+            const sortOptions = {};
+            sortOptions[sortField] = sortOrder;
+
+            // If sorting by scheduledDate, add secondary sort by startTime
+            if (sortField === 'scheduledDate') {
+                sortOptions.startTime = sortOrder;
+            }
+
+            // Get paginated interviews
+            interviews = await Interview.find(filter)
+                .populate('userId', 'name email image')
+                .populate('jobId', 'title')
+                .populate('applicationId', 'status')
+                .sort(sortOptions)
+                .skip(skip)
+                .limit(limit)
+                .lean();
+        }
+
+        res.json({
+            success: true,
+            interviews,
+            pagination: {
+                total,
+                page,
+                pages: Math.ceil(total / limit),
+                limit
+            },
+            filters: {
+                startDate: req.query.startDate,
+                endDate: req.query.endDate,
+                status: req.query.status || 'all',
+                jobId: req.query.jobId,
+                keyword: req.query.keyword,
+                sortBy: req.query.sortBy || 'scheduledDate',
+                sortOrder: req.query.sortOrder || 'asc'
+            }
+        });
+    } catch (error) {
+        console.error('Error getting company interviews:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching interviews',
+            error: error.message
+        });
+    }
+};
+export const getCompanyInterviews_0 = async (req, res) => {
+    try {
+        const companyId = req.company._id;
+
         const interviews = await Interview.find({ companyId })
             .populate('userId', 'name email image')
             .populate('jobId', 'title')
@@ -34,6 +188,161 @@ export const getCompanyInterviews = async (req, res) => {
 
 // Lấy danh sách phỏng vấn cho user
 export const getUserInterviews = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Filter parameters
+        const filter = { userId };
+
+        // Filter by date range
+        if (req.query.startDate) {
+            filter.scheduledDate = { ...filter.scheduledDate, $gte: new Date(req.query.startDate) };
+        }
+        if (req.query.endDate) {
+            const endDate = new Date(req.query.endDate);
+            endDate.setHours(23, 59, 59, 999); // Set to end of day
+            filter.scheduledDate = { ...filter.scheduledDate, $lte: endDate };
+        }
+
+        // Filter by status
+        if (req.query.status && req.query.status !== 'all') {
+            filter.status = req.query.status;
+        }
+
+        // Search by company name or job title (need to handle in aggregation)
+        let interviews;
+        let total;
+
+        if (req.query.keyword) {
+            // Using aggregation to search through populated fields
+            const aggregationPipeline = [
+                {
+                    $match: {
+                        userId: new mongoose.Types.ObjectId(userId)
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'companies',
+                        localField: 'companyId',
+                        foreignField: '_id',
+                        as: 'companyDetails'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'jobs',
+                        localField: 'jobId',
+                        foreignField: '_id',
+                        as: 'jobDetails'
+                    }
+                },
+                {
+                    $match: {
+                        $or: [
+                            { 'companyDetails.name': { $regex: req.query.keyword, $options: 'i' } },
+                            { 'jobDetails.title': { $regex: req.query.keyword, $options: 'i' } }
+                        ]
+                    }
+                }
+            ];
+
+            // Apply other filters to the aggregation pipeline
+            if (filter.scheduledDate) {
+                aggregationPipeline[3].$match = {
+                    ...aggregationPipeline[3].$match,
+                    scheduledDate: filter.scheduledDate
+                };
+            }
+            if (filter.status) {
+                aggregationPipeline[3].$match = {
+                    ...aggregationPipeline[3].$match,
+                    status: filter.status
+                };
+            }
+
+            // Count total for pagination
+            const countPipeline = [...aggregationPipeline, { $count: 'total' }];
+            const countResult = await Interview.aggregate(countPipeline);
+            total = countResult.length > 0 ? countResult[0].total : 0;
+
+            // Get paginated results
+            const resultPipeline = [
+                ...aggregationPipeline,
+                { $sort: { scheduledDate: 1, startTime: 1 } },
+                { $skip: skip },
+                { $limit: limit }
+            ];
+
+            interviews = await Interview.aggregate(resultPipeline);
+
+            // Populate references after aggregation
+            interviews = await Interview.populate(interviews, [
+                { path: 'companyId', select: 'name email image' },
+                { path: 'jobId', select: 'title' },
+                { path: 'applicationId', select: 'status' }
+            ]);
+        } else {
+            // Standard query without keyword search
+            // Get total count
+            total = await Interview.countDocuments(filter);
+
+            // Build sort options
+            const sortField = req.query.sortBy || 'scheduledDate';
+            const sortOrder = req.query.sortOrder === 'desc' ? -1 : 1;
+
+            const sortOptions = {};
+            sortOptions[sortField] = sortOrder;
+
+            // If sorting by scheduledDate, add secondary sort by startTime
+            if (sortField === 'scheduledDate') {
+                sortOptions.startTime = sortOrder;
+            }
+
+            // Get paginated interviews
+            interviews = await Interview.find(filter)
+                .populate('companyId', 'name email image')
+                .populate('jobId', 'title')
+                .populate('applicationId', 'status')
+                .sort(sortOptions)
+                .skip(skip)
+                .limit(limit)
+                .lean();
+        }
+
+        res.json({
+            success: true,
+            interviews,
+            pagination: {
+                total,
+                page,
+                pages: Math.ceil(total / limit),
+                limit
+            },
+            filters: {
+                startDate: req.query.startDate,
+                endDate: req.query.endDate,
+                status: req.query.status || 'all',
+                keyword: req.query.keyword,
+                sortBy: req.query.sortBy || 'scheduledDate',
+                sortOrder: req.query.sortOrder || 'asc'
+            }
+        });
+    } catch (error) {
+        console.error('Error getting user interviews:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching interviews',
+            error: error.message
+        });
+    }
+};
+export const getUserInterviews_0 = async (req, res) => {
     try {
         const userId = req.user._id;
 

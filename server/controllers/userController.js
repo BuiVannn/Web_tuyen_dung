@@ -192,6 +192,22 @@ export const loginUser_1 = async (req, res) => {
         });
     }
 };
+export const logoutUser = async (req, res) => {
+    try {
+        // Chỉ trả về thành công, phần còn lại xử lý ở client
+        res.status(200).json({
+            success: true,
+            message: 'Logged out successfully'
+        });
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error during logout',
+            error: error.message
+        });
+    }
+};
 // get user data
 // Lấy thông tin cơ bản của user (tên, email) - có thể dùng cho header
 export const getUserData = async (req, res) => {
@@ -427,6 +443,60 @@ export const updateUserProfile_0 = async (req, res) => {
 // Sửa hàm updateResume trong controllers/userController.js
 export const updateResume = async (req, res) => {
     try {
+        const userId = req.user._id;
+        console.log('updateResume called for user:', userId);
+        console.log('File received:', req.file);
+
+        // Kiểm tra có file hay không
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'No resume file uploaded'
+            });
+        }
+
+        // Upload file lên Cloudinary
+        const result = await cloudinary.uploader.upload(req.file.path, {
+            folder: 'resumes',
+            resource_type: 'auto',
+            public_id: `resume_${userId}_${Date.now()}`,
+            format: 'pdf',
+            use_filename: true,
+            unique_filename: true,
+            overwrite: true,
+        });
+
+        console.log('Cloudinary upload result:', result);
+
+        // Lưu URL resume vào UserProfile
+        const resumeUrl = result.secure_url;
+
+        const updatedProfile = await UserProfile.findOneAndUpdate(
+            { userId },
+            { $set: { resume: resumeUrl } },
+            { new: true, upsert: true }
+        );
+
+        // Xóa file local sau khi đã upload lên Cloudinary
+        fs.unlinkSync(req.file.path);
+        console.log('Local file deleted');
+
+        return res.status(200).json({
+            success: true,
+            message: 'Resume updated successfully',
+            resume: resumeUrl
+        });
+    } catch (error) {
+        console.error('Error updating resume:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error updating resume',
+            error: error.message
+        });
+    }
+};
+export const updateResume_9 = async (req, res) => {
+    try {
         const userId = req.user.id;
 
         // Kiểm tra có file hay không
@@ -543,6 +613,129 @@ export const updateAvatar = async (req, res) => {
 
 export const getUserApplications = async (req, res) => {
     try {
+        const userId = req.user._id;
+
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Build filter
+        const filter = { userId };
+
+        // Filter by status
+        if (req.query.status && req.query.status !== 'all') {
+            filter.status = req.query.status;
+        }
+
+        // Filter by date range
+        if (req.query.startDate) {
+            filter.date = { ...filter.date, $gte: new Date(req.query.startDate) };
+        }
+        if (req.query.endDate) {
+            const endDate = new Date(req.query.endDate);
+            endDate.setHours(23, 59, 59, 999); // Set to end of day
+            filter.date = { ...filter.date, $lte: endDate };
+        }
+
+        // Get total count for pagination
+        const total = await JobApplication.countDocuments(filter);
+
+        // Build sort options
+        const sortBy = req.query.sortBy || 'date';
+        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+        const sortOptions = {};
+        sortOptions[sortBy] = sortOrder;
+
+        // Build query with keyword search on populated fields
+        let applications;
+
+        if (req.query.keyword) {
+            // Using aggregation for searching in populated fields
+            const keyword = req.query.keyword;
+            const aggregationPipeline = [
+                { $match: filter },
+                {
+                    $lookup: {
+                        from: 'jobs',
+                        localField: 'jobId',
+                        foreignField: '_id',
+                        as: 'jobDetails'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'companies',
+                        localField: 'companyId',
+                        foreignField: '_id',
+                        as: 'companyDetails'
+                    }
+                },
+                {
+                    $match: {
+                        $or: [
+                            { 'jobDetails.title': { $regex: keyword, $options: 'i' } },
+                            { 'jobDetails.description': { $regex: keyword, $options: 'i' } },
+                            { 'jobDetails.location': { $regex: keyword, $options: 'i' } },
+                            { 'companyDetails.name': { $regex: keyword, $options: 'i' } }
+                        ]
+                    }
+                },
+                { $sort: sortOptions },
+                { $skip: skip },
+                { $limit: limit }
+            ];
+
+            // Get applications with keyword search
+            applications = await JobApplication.aggregate(aggregationPipeline);
+
+            // Populate fields after aggregation
+            applications = await JobApplication.populate(applications, [
+                { path: 'companyId', select: 'name email image' },
+                { path: 'jobId', select: 'title description location category level salary' }
+            ]);
+        } else {
+            // Standard query without keyword search
+            applications = await JobApplication.find(filter)
+                .populate('companyId', 'name email image')
+                .populate('jobId', 'title description location category level salary')
+                .sort(sortOptions)
+                .skip(skip)
+                .limit(limit)
+                .lean();
+        }
+
+        console.log(`Found ${applications.length} applications for user (page ${page})`);
+
+        return res.json({
+            success: true,
+            applications,
+            pagination: {
+                total,
+                page,
+                pages: Math.ceil(total / limit),
+                limit
+            },
+            filters: {
+                status: req.query.status || 'all',
+                startDate: req.query.startDate,
+                endDate: req.query.endDate,
+                keyword: req.query.keyword,
+                sortBy,
+                sortOrder: sortOrder === 1 ? 'asc' : 'desc'
+            }
+        });
+    } catch (error) {
+        console.error('Get applications error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching applications',
+            error: error.message
+        });
+    }
+};
+export const getUserApplications_2 = async (req, res) => {
+    try {
         // Debug log
         console.log('Fetching applications for user:', req.user._id);
 
@@ -618,12 +811,315 @@ export const getUserApplications_0 = async (req, res) => {
         });
     }
 };
-
 export const applyForJob = async (req, res) => {
+    try {
+        const {
+            jobId,
+            fullName,
+            email,
+            phoneNumber,
+            birthYear,
+            education,
+            coverLetter
+        } = req.body;
+
+        const userId = req.user._id;
+
+        console.log('Application request:', { jobId, userId });
+
+        // Validate ObjectIds
+        if (!mongoose.Types.ObjectId.isValid(jobId) ||
+            !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid ID format'
+            });
+        }
+
+        // Validate required fields
+        if (!fullName || !email || !phoneNumber) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please fill all required fields (name, email, phone)'
+            });
+        }
+
+        // Kiểm tra định dạng email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please enter a valid email address'
+            });
+        }
+
+        // Check user exists and has resume
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Lấy resumeUrl từ user profile
+        const userProfile = await UserProfile.findOne({ userId });
+        const resumeUrl = userProfile?.resume || user.resume;
+
+        if (!resumeUrl) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please upload your resume before applying'
+            });
+        }
+
+        // Check if already applied
+        const existingApplication = await JobApplication.findOne({
+            jobId,
+            userId
+        });
+
+        if (existingApplication) {
+            return res.status(400).json({
+                success: false,
+                message: 'You have already applied for this job'
+            });
+        }
+
+        // Get job details and validate
+        const job = await Job.findById(jobId);
+        if (!job) {
+            return res.status(404).json({
+                success: false,
+                message: 'Job not found'
+            });
+        }
+
+        if (!job.visible || job.status !== 'active') {
+            return res.status(400).json({
+                success: false,
+                message: 'This job is not available for applications'
+            });
+        }
+
+        // Start a transaction
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+            // Create application với thông tin cơ bản
+            const application = await JobApplication.create([{
+                companyId: job.companyId,
+                userId,
+                jobId,
+                status: 'pending',
+                date: new Date(),
+                basicInfo: {
+                    fullName,
+                    email,
+                    phoneNumber,
+                    birthYear: birthYear || null,
+                    education: education || '',
+                    coverLetter: coverLetter || '',
+                    resumeUrl,
+                    submittedFrom: req.headers['user-agent'] || 'Unknown',
+                    ipAddress: req.ip || 'Unknown'
+                }
+            }], { session });
+
+            // Increment applicationsCount
+            await Job.findByIdAndUpdate(
+                jobId,
+                { $inc: { applicationsCount: 1 } },
+                { session }
+            );
+
+            // Commit the transaction
+            await session.commitTransaction();
+
+            // Populate application data
+            const populatedApplication = await JobApplication.findById(application[0]._id)
+                .populate('companyId', 'name email image')
+                .populate('jobId', 'title description location category level salary')
+                .populate('userId', 'name email')
+                .lean();
+
+            console.log('Application created:', populatedApplication._id);
+
+            return res.status(201).json({
+                success: true,
+                message: 'Application submitted successfully',
+                application: populatedApplication
+            });
+
+        } catch (error) {
+            // If error occurs, abort transaction
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            // End session
+            session.endSession();
+        }
+
+    } catch (error) {
+        console.error('Apply job error:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Error submitting application'
+        });
+    }
+};
+export const applyForJob_ok1 = async (req, res) => {
+    try {
+        const {
+            jobId,
+            coverLetter,         // Thêm trường cover letter
+            phoneNumber,         // Thêm trường số điện thoại
+            relevantExperience,  // Thêm trường kinh nghiệm liên quan
+            availableStartDate   // Thêm trường ngày có thể bắt đầu
+        } = req.body;
+        const userId = req.user._id;
+
+        console.log('Application request:', { jobId, userId, coverLetter });
+
+        // Validate ObjectIds
+        if (!mongoose.Types.ObjectId.isValid(jobId) ||
+            !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid ID format'
+            });
+        }
+
+        // Kiểm tra các trường bắt buộc trong form
+        if (!coverLetter || coverLetter.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                message: 'Cover letter is required'
+            });
+        }
+
+        if (!phoneNumber || phoneNumber.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                message: 'Phone number is required'
+            });
+        }
+
+        // Check if user exists and has required fields
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        if (!user.resume) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please upload your resume before applying'
+            });
+        }
+
+        // Check if already applied
+        const existingApplication = await JobApplication.findOne({
+            jobId,
+            userId
+        });
+
+        if (existingApplication) {
+            return res.status(400).json({
+                success: false,
+                message: 'You have already applied for this job'
+            });
+        }
+
+        // Get job details and validate
+        const job = await Job.findById(jobId);
+        if (!job) {
+            return res.status(404).json({
+                success: false,
+                message: 'Job not found'
+            });
+        }
+
+        if (!job.visible || job.status !== 'active') {
+            return res.status(400).json({
+                success: false,
+                message: 'This job is not available for applications'
+            });
+        }
+
+        // Start a transaction
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+            // Create application với thông tin bổ sung từ form
+            const application = await JobApplication.create([{
+                companyId: job.companyId,
+                userId,
+                jobId,
+                status: 'pending',
+                date: new Date(),
+                coverLetter,
+                phoneNumber,
+                relevantExperience: relevantExperience || '',
+                availableStartDate: availableStartDate ? new Date(availableStartDate) : null,
+                applicationDetails: {
+                    submittedFrom: req.headers['user-agent'] || 'Unknown',
+                    ipAddress: req.ip || 'Unknown'
+                }
+            }], { session });
+
+            // Increment applicationsCount
+            await Job.findByIdAndUpdate(
+                jobId,
+                { $inc: { applicationsCount: 1 } },
+                { session }
+            );
+
+            // Commit the transaction
+            await session.commitTransaction();
+
+            // Populate application data
+            const populatedApplication = await JobApplication.findById(application[0]._id)
+                .populate('companyId', 'name email image')
+                .populate('jobId', 'title description location category level salary')
+                .populate('userId', 'name email resume')
+                .lean();
+
+            console.log('Application created:', populatedApplication._id);
+
+            return res.status(201).json({
+                success: true,
+                message: 'Application submitted successfully',
+                application: populatedApplication
+            });
+
+        } catch (error) {
+            // If error occurs, abort transaction
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            // End session
+            session.endSession();
+        }
+
+    } catch (error) {
+        console.error('Apply job error:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Error submitting application'
+        });
+    }
+};
+export const applyForJob_ok = async (req, res) => {
     try {
         const { jobId } = req.body;
         const userId = req.user._id;
-
+        console.log(req);
         // Debug logs
         console.log('Application request:', { jobId, userId });
 
@@ -1268,23 +1764,21 @@ export const getUserDashboardData = async (req, res) => {
         // Lấy các đơn ứng tuyển gần đây
         const recentApplications = applications.slice(0, 5);
 
-        // Lấy phỏng vấn sắp tới (nếu có model Interview)
-        let upcomingInterviews = [];
-        try {
-            const Interview = mongoose.model('Interview');
-            upcomingInterviews = await Interview.find({
-                candidateId: userId,
-                scheduledTime: { $gte: new Date() }
-            })
-                .populate('jobId', 'title')
-                .populate('companyId', 'name image')
-                .sort({ scheduledTime: 1 })
-                .limit(5)
-                .lean();
-        } catch (error) {
-            // Model Interview không tồn tại, bỏ qua
-            console.log('Interview model not found, skipping upcoming interviews');
-        }
+        // Lấy phỏng vấn sắp tới từ model Interview
+        const Interview = mongoose.model('Interview');
+        const currentDate = new Date();
+
+        const upcomingInterviews = await Interview.find({
+            userId: userId,
+            scheduledDate: { $gte: currentDate },
+            status: { $ne: 'cancelled' }
+        })
+            .populate('jobId', 'title')
+            .populate('companyId', 'name image')
+            .sort({ scheduledDate: 1, startTime: 1 })
+            .limit(3)
+            .lean();
+
 
         // Trả về kết quả
         return res.status(200).json({
