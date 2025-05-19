@@ -586,7 +586,59 @@ export const updateResume_1 = async (req, res) => {
 };
 
 // Cập nhật avatar
+// Cập nhật avatar
 export const updateAvatar = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        console.log('updateAvatar called for user:', userId);
+        console.log('File received:', req.file);
+
+        // Kiểm tra có file hay không
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'No avatar file uploaded'
+            });
+        }
+
+        // Upload file lên Cloudinary
+        const result = await cloudinary.uploader.upload(req.file.path, {
+            folder: 'avatars',
+            resource_type: 'image',
+            public_id: `avatar_${userId}_${Date.now()}`,
+            overwrite: true,
+        });
+
+        console.log('Cloudinary upload result:', result);
+
+        // Lưu URL avatar vào UserProfile
+        const avatarUrl = result.secure_url;
+
+        const updatedProfile = await UserProfile.findOneAndUpdate(
+            { userId },
+            { $set: { avatar: avatarUrl } },
+            { new: true, upsert: true }
+        );
+
+        // Xóa file local sau khi đã upload lên Cloudinary
+        fs.unlinkSync(req.file.path);
+        console.log('Local file deleted');
+
+        return res.status(200).json({
+            success: true,
+            message: 'Avatar updated successfully',
+            avatar: avatarUrl
+        });
+    } catch (error) {
+        console.error('Error updating avatar:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error updating avatar',
+            error: error.message
+        });
+    }
+};
+export const updateAvatar_cu = async (req, res) => {
     try {
         const userId = req.user.id;
         if (!req.file) {

@@ -621,6 +621,187 @@ export const getJobs = async (req, res) => {
             filter.$or = [
                 { title: { $regex: keyword, $options: 'i' } },
                 { description: { $regex: keyword, $options: 'i' } },
+                { requiredSkills: { $in: [new RegExp(keyword, 'i')] } },
+                { preferredSkills: { $in: [new RegExp(keyword, 'i')] } },
+                { category: { $regex: keyword, $options: 'i' } }
+            ];
+        }
+
+        // Location filter - support multiple locations
+        if (req.query.location) {
+            if (Array.isArray(req.query.location)) {
+                filter.location = { $in: req.query.location.map(loc => new RegExp(loc, 'i')) };
+            } else {
+                filter.location = { $regex: req.query.location, $options: 'i' };
+            }
+        }
+
+        // Category filter - support multiple categories
+        if (req.query.category) {
+            if (Array.isArray(req.query.category)) {
+                filter.category = { $in: req.query.category };
+            } else {
+                filter.category = req.query.category;
+            }
+        }
+
+        // Job type filter - support multiple types
+        if (req.query.type) {
+            if (Array.isArray(req.query.type)) {
+                filter.type = { $in: req.query.type };
+            } else {
+                filter.type = req.query.type;
+            }
+        }
+
+        // Currency filter
+        if (req.query.currency) {
+            filter.currency = req.query.currency;
+        }
+
+        // Salary range filter
+        if (req.query.minSalary) {
+            // Tìm các công việc có mức lương tối đa >= minSalary người dùng yêu cầu
+            filter.maxSalary = { $gte: parseInt(req.query.minSalary) };
+        }
+        if (req.query.maxSalary) {
+            // Tìm các công việc có mức lương tối thiểu <= maxSalary người dùng yêu cầu
+            filter.minSalary = { $lte: parseInt(req.query.maxSalary) };
+        }
+
+        // Experience level filter - support multiple experience levels
+        if (req.query.experience) {
+            if (Array.isArray(req.query.experience)) {
+                filter.experience = { $in: req.query.experience };
+            } else {
+                filter.experience = req.query.experience;
+            }
+        }
+
+        // Required skills filter
+        if (req.query.requiredSkills) {
+            const skills = Array.isArray(req.query.requiredSkills)
+                ? req.query.requiredSkills
+                : req.query.requiredSkills.split(',').map(skill => skill.trim());
+
+            filter.requiredSkills = { $in: skills.map(skill => new RegExp(skill, 'i')) };
+        }
+
+        // Company filter
+        if (req.query.companyId && mongoose.Types.ObjectId.isValid(req.query.companyId)) {
+            filter.companyId = req.query.companyId;
+        }
+
+        // Date range filter
+        if (req.query.postedAfter) {
+            filter.createdAt = {
+                ...filter.createdAt,
+                $gte: new Date(req.query.postedAfter)
+            };
+        }
+
+        if (req.query.postedBefore) {
+            const endDate = new Date(req.query.postedBefore);
+            endDate.setHours(23, 59, 59, 999);
+            filter.createdAt = {
+                ...filter.createdAt,
+                $lte: endDate
+            };
+        }
+
+        // Determine sort order
+        let sortOption = { createdAt: -1 }; // Default: newest first
+
+        if (req.query.sort) {
+            switch (req.query.sort) {
+                case 'oldest':
+                    sortOption = { createdAt: 1 };
+                    break;
+                case 'salary-high-low':
+                    sortOption = { maxSalary: -1, minSalary: -1 };
+                    break;
+                case 'salary-low-high':
+                    sortOption = { minSalary: 1, maxSalary: 1 };
+                    break;
+                case 'title-az':
+                    sortOption = { title: 1 };
+                    break;
+                case 'title-za':
+                    sortOption = { title: -1 };
+                    break;
+                case 'relevance':
+                    // Sort by relevance would need a text index or other implementation
+                    sortOption = { createdAt: -1 };
+                    break;
+                default:
+                    sortOption = { createdAt: -1 };
+            }
+        }
+
+        // Get total count for pagination info
+        const total = await Job.countDocuments(filter);
+
+        // Execute query with pagination
+        const jobs = await Job.find(filter)
+            .populate('companyId', 'name image location')
+            .sort(sortOption)
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        console.log(`Found ${jobs.length} jobs (page ${page}/${Math.ceil(total / limit)})`);
+
+        return res.status(200).json({
+            success: true,
+            jobs: jobs,
+            pagination: {
+                total,
+                page,
+                pages: Math.ceil(total / limit),
+                limit
+            },
+            filters: {
+                keyword: req.query.keyword || null,
+                location: req.query.location || null,
+                category: req.query.category || null,
+                type: req.query.type || null,
+                experience: req.query.experience || null,
+                minSalary: req.query.minSalary || null,
+                maxSalary: req.query.maxSalary || null,
+                currency: req.query.currency || null,
+                sort: req.query.sort || 'latest'
+            }
+        });
+    } catch (error) {
+        console.error('Error in getJobs:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error fetching jobs',
+            error: error.message
+        });
+    }
+};
+export const getJobs_9 = async (req, res) => {
+    try {
+        console.log('Fetching jobs with parameters:', req.query);
+
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Build query filter
+        const filter = {
+            visible: true,
+            status: { $in: ['active', 'approved'] }
+        };
+
+        // Add keyword search if provided
+        if (req.query.keyword) {
+            const keyword = req.query.keyword;
+            filter.$or = [
+                { title: { $regex: keyword, $options: 'i' } },
+                { description: { $regex: keyword, $options: 'i' } },
                 { skills: { $regex: keyword, $options: 'i' } }
             ];
         }
